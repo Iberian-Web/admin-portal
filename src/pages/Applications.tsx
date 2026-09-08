@@ -47,7 +47,7 @@ const ICONS: Record<string, { color: string; node: React.ReactNode }> = {
 };
 
 const FALLBACK_ICON = {
-  color: "text-indigo-400",
+  color: "text-teal-400",
   node: (
     <svg
       className="w-5 h-5"
@@ -101,7 +101,7 @@ function PriceModal({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+        className="relative bg-zinc-900 border border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-zinc-100 mb-1">
@@ -111,7 +111,7 @@ function PriceModal({
 
         <input
           autoFocus
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-colors"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
           placeholder="Ej. 29.99"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
@@ -134,7 +134,7 @@ function PriceModal({
           <button
             onClick={submit}
             disabled={saving}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
           >
             {saving ? "Guardando…" : "Guardar"}
           </button>

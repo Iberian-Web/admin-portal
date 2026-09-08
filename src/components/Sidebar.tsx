@@ -53,32 +53,13 @@ function SidebarContent({
 }) {
   return (
     <>
-      {/* Logo */}
+      {/* Header / Title */}
       <div className="h-16 flex items-center px-5 border-b border-zinc-800 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-              />
-            </svg>
-          </div>
-          <span className="text-sm font-semibold text-zinc-100 tracking-tight">
-            ClientesCRM
-          </span>
-        </div>
+        <span className="text-sm font-medium text-zinc-200">Administrador</span>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest px-2 mb-2">
           Principal
         </p>
@@ -89,10 +70,10 @@ function SidebarContent({
             end
             onClick={onLinkClick}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-indigo-600/15 text-indigo-400"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
               }`
             }
           >
@@ -103,10 +84,10 @@ function SidebarContent({
       </nav>
 
       {/* Session actions */}
-      <div className="px-3 py-3 border-t border-zinc-800 space-y-2 shrink-0">
+      <div className="px-3 py-3 border-t border-zinc-800 shrink-0">
         <button
           onClick={handleLogout}
-          className="w-full px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-md transition-colors text-left flex items-center gap-2"
+          className="w-full px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5"
         >
           <svg
             className="w-4 h-4"
@@ -145,26 +126,7 @@ export default function Sidebar() {
     <>
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <header className="md:hidden sticky top-0 z-40 h-14 flex items-center justify-between px-4 bg-zinc-900 border-b border-zinc-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-              />
-            </svg>
-          </div>
-          <span className="text-sm font-semibold text-zinc-100 tracking-tight">
-            ClientesCRM
-          </span>
-        </div>
+        <span className="text-sm font-medium text-zinc-200">Administrador</span>
 
         {/* Hamburger */}
         <button
@@ -174,13 +136,19 @@ export default function Sidebar() {
         >
           <div className="absolute w-5 h-4 flex flex-col justify-between items-center">
             <span
-              className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${mobileOpen ? "rotate-45 translate-y-1.75" : ""}`}
+              className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
+                mobileOpen ? "rotate-45 translate-y-1.75" : ""
+              }`}
             />
             <span
-              className={`h-0.5 w-full bg-current rounded transition-all duration-300 ${mobileOpen ? "opacity-0 scale-0" : ""}`}
+              className={`h-0.5 w-full bg-current rounded transition-all duration-300 ${
+                mobileOpen ? "opacity-0 scale-0" : ""
+              }`}
             />
             <span
-              className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${mobileOpen ? "-rotate-45 -translate-y-2.25" : ""}`}
+              className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
+                mobileOpen ? "-rotate-45 -translate-y-2.25" : ""
+              }`}
             />
           </div>
         </button>
@@ -204,7 +172,7 @@ export default function Sidebar() {
         <SidebarContent onLinkClick={closeDrawer} handleLogout={handleLogout} />
       </div>
 
-      {/* ── Desktop sidebar (unchanged) ─────────────────────────────────────── */}
+      {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
       <aside className="hidden md:flex w-56 shrink-0 bg-zinc-900 border-r border-zinc-800 flex-col h-screen sticky top-0">
         <SidebarContent handleLogout={handleLogout} />
       </aside>

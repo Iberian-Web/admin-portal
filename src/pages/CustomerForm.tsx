@@ -170,7 +170,7 @@ function Toast({
       ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
       : variant === "error"
         ? "bg-red-500/15 border-red-500/30 text-red-300"
-        : "bg-indigo-500/15 border-indigo-500/30 text-indigo-300";
+        : "bg-teal-500/15 border-teal-500/30 text-teal-300";
 
   return (
     <div
@@ -267,7 +267,7 @@ function ConfirmDialog({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+        className="relative bg-zinc-900 border border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-zinc-100 mb-2">{title}</h3>
@@ -333,8 +333,8 @@ function Toggle({
         event.stopPropagation();
         onChange(!checked);
       }}
-      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-40 disabled:cursor-not-allowed ${
-        checked ? "bg-indigo-600" : "bg-zinc-700"
+      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 disabled:opacity-40 disabled:cursor-not-allowed ${
+        checked ? "bg-teal-600" : "bg-zinc-700"
       }`}
     >
       <span
@@ -375,7 +375,7 @@ function Field({
     <div className={className}>
       <label className="text-xs font-medium text-zinc-400 block mb-1.5">
         {label}
-        {required && <span className="text-indigo-400 ml-0.5">*</span>}
+        {required && <span className="text-teal-400 ml-0.5">*</span>}
         {hint && <span className="text-zinc-600 ml-1 font-normal">{hint}</span>}
       </label>
       {children}
@@ -405,7 +405,7 @@ const getInputClass = (hasError?: boolean | string) =>
   `w-full bg-zinc-800 border rounded-lg px-3 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors ${
     hasError
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
-      : "border-zinc-700 focus:border-indigo-500 focus:ring-indigo-500/30"
+      : "border-zinc-700 focus:border-teal-500 focus:ring-teal-500/30"
   }`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -608,7 +608,17 @@ export default function CustomerForm() {
         setHasCopiedPassword(false);
         setShowPassword(true);
       }
-    } catch {
+    } catch (loadError) {
+      if (
+        isEdit &&
+        loadError instanceof Error &&
+        "status" in loadError &&
+        loadError.status === 404
+      ) {
+        navigate("/", { replace: true });
+        return;
+      }
+
       setError(
         "Error al cargar los datos. Por favor, revisa tu conexión o intenta más tarde.",
       );
@@ -616,7 +626,7 @@ export default function CustomerForm() {
     } finally {
       setLoading(false);
     }
-  }, [id, isEdit, showToast]);
+  }, [id, isEdit, navigate, showToast]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1219,7 +1229,7 @@ export default function CustomerForm() {
               <button
                 type="button"
                 onClick={addExtraUser}
-                className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/25 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/25 rounded-lg transition-colors"
               >
                 <svg
                   className="w-3.5 h-3.5"
@@ -1774,7 +1784,7 @@ export default function CustomerForm() {
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium border transition-all duration-300 shrink-0 ${
                             justRecorded
                               ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
-                              : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-300 hover:bg-indigo-500/10"
+                              : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-teal-500/50 hover:text-teal-300 hover:bg-teal-500/10"
                           }`}
                         >
                           {justRecorded ? (
@@ -1918,7 +1928,7 @@ export default function CustomerForm() {
                       key={app.id}
                       className={`border rounded-xl overflow-hidden transition-colors ${
                         isSelected
-                          ? "border-indigo-500/40 bg-indigo-500/5"
+                          ? "border-teal-500/40 bg-teal-500/5"
                           : "border-zinc-800 bg-zinc-800/30"
                       }`}
                     >
@@ -1929,7 +1939,7 @@ export default function CustomerForm() {
                         <div
                           className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
                             isSelected
-                              ? "bg-indigo-600 border-indigo-600"
+                              ? "bg-teal-600 border-teal-600"
                               : "border-zinc-600 bg-zinc-800"
                           }`}
                         >
@@ -1964,7 +1974,7 @@ export default function CustomerForm() {
                       </div>
 
                       {isSelected && app.services.length > 0 && (
-                        <div className="border-t border-indigo-500/20 divide-y divide-zinc-800/60">
+                        <div className="border-t border-teal-500/20 divide-y divide-zinc-800/60">
                           {app.services.map((svc) => {
                             const active = svcMap[svc.id] ?? false;
                             return (
@@ -2000,7 +2010,7 @@ export default function CustomerForm() {
                       )}
 
                       {isSelected && app.services.length === 0 && (
-                        <div className="border-t border-indigo-500/20 px-5 py-3">
+                        <div className="border-t border-teal-500/20 px-5 py-3">
                           <p className="text-xs text-zinc-600">
                             Esta aplicación no tiene servicios definidos.
                           </p>
@@ -2073,7 +2083,7 @@ export default function CustomerForm() {
                 type="button"
                 onClick={submit}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                className="flex items-center gap-2 px-5 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {saving && (
                   <svg

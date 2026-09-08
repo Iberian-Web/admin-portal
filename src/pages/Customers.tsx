@@ -26,17 +26,17 @@ const statusStyles: Record<CustomerStatus, string> = {
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return (
     <span
-      className={`ml-1 inline-flex flex-col gap-px ${active ? "text-indigo-400" : "text-zinc-600"}`}
+      className={`ml-1 inline-flex flex-col gap-px ${active ? "text-teal-400" : "text-zinc-600"}`}
     >
       <svg
-        className={`w-2.5 h-2.5 ${active && dir === "asc" ? "text-indigo-400" : "text-zinc-600"}`}
+        className={`w-2.5 h-2.5 ${active && dir === "asc" ? "text-teal-400" : "text-zinc-600"}`}
         viewBox="0 0 10 6"
         fill="currentColor"
       >
         <path d="M5 0L10 6H0L5 0Z" />
       </svg>
       <svg
-        className={`w-2.5 h-2.5 ${active && dir === "desc" ? "text-indigo-400" : "text-zinc-600"}`}
+        className={`w-2.5 h-2.5 ${active && dir === "desc" ? "text-teal-400" : "text-zinc-600"}`}
         viewBox="0 0 10 6"
         fill="currentColor"
       >
@@ -124,7 +124,7 @@ export default function Customers() {
         </div>
         <button
           onClick={() => navigate("/customers/new")}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
         >
           <svg
             className="w-4 h-4"
@@ -192,7 +192,7 @@ export default function Customers() {
           placeholder="Buscar por nombre, email, empresa, DNI o dominio..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-colors"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
         />
       </div>
 
@@ -321,7 +321,7 @@ export default function Customers() {
       <p className="text-xs text-zinc-600 mt-3">
         {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
         {sortKey && (
-          <span className="ml-2 text-indigo-500/60">
+          <span className="ml-2 text-teal-500/60">
             · ordenado por{" "}
             {columns.find((c) => c.key === sortKey)?.label.toLowerCase()} (
             {sortDir === "asc" ? "↑" : "↓"})
