@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../auth/useAuth";
+import ThemeToggle from "./ThemeToggle";
 
 const navItems = [
   {
@@ -54,8 +55,11 @@ function SidebarContent({
   return (
     <>
       {/* Header / Title */}
-      <div className="h-16 flex items-center px-5 border-b border-zinc-800 shrink-0">
-        <span className="text-sm font-medium text-zinc-200">Administrador</span>
+      <div className="h-16 flex items-center justify-between gap-2 px-5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Administrador
+        </span>
+        <ThemeToggle className="shrink-0" />
       </div>
 
       {/* Nav */}
@@ -72,8 +76,8 @@ function SidebarContent({
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-zinc-800 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
               }`
             }
           >
@@ -84,10 +88,10 @@ function SidebarContent({
       </nav>
 
       {/* Session actions */}
-      <div className="px-3 py-3 border-t border-zinc-800 shrink-0">
+      <div className="px-3 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
         <button
           onClick={handleLogout}
-          className="w-full px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5"
+          className="w-full px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5"
         >
           <svg
             className="w-4 h-4"
@@ -125,33 +129,38 @@ export default function Sidebar() {
   return (
     <>
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
-      <header className="md:hidden sticky top-0 z-40 h-14 flex items-center justify-between px-4 bg-zinc-900 border-b border-zinc-800">
-        <span className="text-sm font-medium text-zinc-200">Administrador</span>
+      <header className="md:hidden sticky top-0 z-40 h-14 flex items-center justify-between px-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Administrador
+        </span>
 
         {/* Hamburger */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="relative w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-zinc-100 focus:outline-none"
-          aria-label="Abrir menú"
-        >
-          <div className="absolute w-5 h-4 flex flex-col justify-between items-center">
-            <span
-              className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
-                mobileOpen ? "rotate-45 translate-y-1.75" : ""
-              }`}
-            />
-            <span
-              className={`h-0.5 w-full bg-current rounded transition-all duration-300 ${
-                mobileOpen ? "opacity-0 scale-0" : ""
-              }`}
-            />
-            <span
-              className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
-                mobileOpen ? "-rotate-45 -translate-y-2.25" : ""
-              }`}
-            />
-          </div>
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="relative w-9 h-9 flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 focus:outline-none"
+            aria-label="Abrir menú"
+          >
+            <div className="absolute w-5 h-4 flex flex-col justify-between items-center">
+              <span
+                className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
+                  mobileOpen ? "rotate-45 translate-y-1.75" : ""
+                }`}
+              />
+              <span
+                className={`h-0.5 w-full bg-current rounded transition-all duration-300 ${
+                  mobileOpen ? "opacity-0 scale-0" : ""
+                }`}
+              />
+              <span
+                className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
+                  mobileOpen ? "-rotate-45 -translate-y-2.25" : ""
+                }`}
+              />
+            </div>
+          </button>
+        </div>
       </header>
 
       {/* ── Mobile drawer backdrop ──────────────────────────────────────────── */}
@@ -165,7 +174,7 @@ export default function Sidebar() {
 
       {/* ── Mobile drawer ───────────────────────────────────────────────────── */}
       <div
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-64 bg-zinc-900 flex flex-col transform transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-zinc-900 flex flex-col transform transition-transform duration-300 ease-in-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -173,7 +182,7 @@ export default function Sidebar() {
       </div>
 
       {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-56 shrink-0 bg-zinc-900 border-r border-zinc-800 flex-col h-screen sticky top-0">
+      <aside className="hidden md:flex w-56 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex-col h-screen sticky top-0">
         <SidebarContent handleLogout={handleLogout} />
       </aside>
     </>

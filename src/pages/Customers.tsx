@@ -16,9 +16,12 @@ const statusLabel: Record<CustomerStatus, string> = {
 };
 
 const statusStyles: Record<CustomerStatus, string> = {
-  ACTIVE: "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20",
-  INACTIVE: "bg-zinc-700/40 text-zinc-400 ring-1 ring-zinc-600/30",
-  PENDING: "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20",
+  ACTIVE:
+    "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-500/20",
+  INACTIVE:
+    "bg-zinc-200 dark:bg-zinc-700/40 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-300 dark:ring-zinc-600/30",
+  PENDING:
+    "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-1 ring-amber-200 dark:ring-amber-500/20",
 };
 
 // ─── Sort icon ────────────────────────────────────────────────────────────────
@@ -26,17 +29,17 @@ const statusStyles: Record<CustomerStatus, string> = {
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return (
     <span
-      className={`ml-1 inline-flex flex-col gap-px ${active ? "text-teal-400" : "text-zinc-600"}`}
+      className={`ml-1 inline-flex flex-col gap-px ${active ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
     >
       <svg
-        className={`w-2.5 h-2.5 ${active && dir === "asc" ? "text-teal-400" : "text-zinc-600"}`}
+        className={`w-2.5 h-2.5 ${active && dir === "asc" ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
         viewBox="0 0 10 6"
         fill="currentColor"
       >
         <path d="M5 0L10 6H0L5 0Z" />
       </svg>
       <svg
-        className={`w-2.5 h-2.5 ${active && dir === "desc" ? "text-teal-400" : "text-zinc-600"}`}
+        className={`w-2.5 h-2.5 ${active && dir === "desc" ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
         viewBox="0 0 10 6"
         fill="currentColor"
       >
@@ -117,7 +120,9 @@ export default function Customers() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-100">Clientes</h1>
+          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Clientes
+          </h1>
           <p className="text-sm text-zinc-500 mt-0.5">
             {customers.length} clientes registrados
           </p>
@@ -149,22 +154,22 @@ export default function Customers() {
           {
             label: "Activos",
             value: customers.filter((c) => c.status === "ACTIVE").length,
-            color: "text-emerald-400",
+            color: "text-emerald-700 dark:text-emerald-400",
           },
           {
             label: "Pendientes",
             value: customers.filter((c) => c.status === "PENDING").length,
-            color: "text-amber-400",
+            color: "text-amber-700 dark:text-amber-400",
           },
           {
             label: "Inactivos",
             value: customers.filter((c) => c.status === "INACTIVE").length,
-            color: "text-zinc-400",
+            color: "text-zinc-600 dark:text-zinc-400",
           },
         ].map(({ label, value, color }) => (
           <div
             key={label}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl px-5 py-4"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4"
           >
             <p className="text-xs font-medium text-zinc-500 mb-1">{label}</p>
             <p className={`text-2xl font-semibold ${color}`}>{value}</p>
@@ -192,12 +197,12 @@ export default function Customers() {
           placeholder="Buscar por nombre, email, empresa, DNI o dominio..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
+          className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
         />
       </div>
 
       {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
         {/* 👇 Contenedor añadido para habilitar el scroll horizontal */}
         <div className="overflow-x-auto">
           {/* 👇 Añadimos min-w-[800px] para asegurar que mantenga un tamaño legible en móvil */}
@@ -210,12 +215,12 @@ export default function Customers() {
               <col className="w-[19%]" />
             </colgroup>
             <thead>
-              <tr className="border-b border-zinc-800 text-left">
+              <tr className="border-b border-zinc-200 dark:border-zinc-800 text-left">
                 {columns.map((col) => (
                   <th
                     key={col.key}
                     onClick={() => handleSort(col.key)}
-                    className="px-5 py-3.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-300 transition-colors"
+                    className="px-5 py-3.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
                   >
                     <span className="inline-flex items-center gap-0.5">
                       {col.label}
@@ -228,7 +233,7 @@ export default function Customers() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {loading ? (
                 <tr>
                   <td
@@ -243,11 +248,11 @@ export default function Customers() {
                   <tr
                     key={c.id}
                     onClick={() => navigate(`/customers/${c.id}`)}
-                    className="hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                    className="hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
                   >
                     <td className="px-5 py-3.5">
                       <span
-                        className="block font-medium text-zinc-200 truncate"
+                        className="block font-medium text-zinc-800 dark:text-zinc-200 truncate"
                         title={c.name}
                       >
                         {c.name}
@@ -255,7 +260,7 @@ export default function Customers() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span
-                        className="block text-zinc-400 truncate"
+                        className="block text-zinc-600 dark:text-zinc-400 truncate"
                         title={c.email}
                       >
                         {c.email}
@@ -263,7 +268,7 @@ export default function Customers() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span
-                        className="block text-zinc-400 truncate"
+                        className="block text-zinc-600 dark:text-zinc-400 truncate"
                         title={c.company || undefined}
                       >
                         {c.company || "—"}
@@ -280,14 +285,14 @@ export default function Customers() {
                       {c.domains.length > 0 ? (
                         <div className="flex items-center gap-1 min-w-0">
                           <span
-                            className="text-[10px] font-medium bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded truncate max-w-30"
+                            className="text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.5 rounded truncate max-w-30"
                             title={c.domains[0]}
                           >
                             {c.domains[0]}
                           </span>
                           {c.domains.length > 1 && (
                             <span
-                              className="text-[10px] font-medium bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded shrink-0"
+                              className="text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded shrink-0"
                               title={c.domains.slice(1).join(", ")}
                             >
                               +{c.domains.length - 1}
@@ -321,7 +326,7 @@ export default function Customers() {
       <p className="text-xs text-zinc-600 mt-3">
         {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
         {sortKey && (
-          <span className="ml-2 text-teal-500/60">
+          <span className="ml-2 text-teal-700/70 dark:text-teal-500/60">
             · ordenado por{" "}
             {columns.find((c) => c.key === sortKey)?.label.toLowerCase()} (
             {sortDir === "asc" ? "↑" : "↓"})

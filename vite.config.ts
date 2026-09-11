@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Admin Portal",
-        short_name: "Admin Portal",
+        name: "Portal administrador",
+        short_name: "Portal administrador",
         description: "Gestiona clientes y servicios desde un solo lugar.",
         lang: "es",
         start_url: "/",

@@ -5,7 +5,7 @@ import {
   applicationsApi,
   instancesApi,
   type Customer,
-  type CustomerAccess,
+  type Credential,
   type CustomerStatus,
   type Application,
   type Instance,
@@ -134,20 +134,23 @@ function getBillingStatus(instance: Instance): BillingStatus {
   if (daysOverdue > 0) {
     return {
       label: `Atrasado ${daysOverdue} día${daysOverdue === 1 ? "" : "s"}`,
-      colorClasses: "bg-red-500/15 border-red-500/30 text-red-400",
+      colorClasses:
+        "bg-red-50 dark:bg-red-500/15 border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-400",
       nextDueDate,
     };
   }
   if (daysOverdue === 0) {
     return {
       label: "Vence hoy",
-      colorClasses: "bg-amber-500/15 border-amber-500/30 text-amber-400",
+      colorClasses:
+        "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-400",
       nextDueDate,
     };
   }
   return {
     label: "Al día",
-    colorClasses: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400",
+    colorClasses:
+      "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400",
     nextDueDate,
   };
 }
@@ -167,10 +170,10 @@ function Toast({
 }) {
   const colors =
     variant === "success"
-      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+      ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
       : variant === "error"
-        ? "bg-red-500/15 border-red-500/30 text-red-300"
-        : "bg-teal-500/15 border-teal-500/30 text-teal-300";
+        ? "bg-red-50 dark:bg-red-500/15 border-red-300 dark:border-red-500/30 text-red-800 dark:text-red-300"
+        : "bg-teal-50 dark:bg-teal-500/15 border-teal-300 dark:border-teal-500/30 text-teal-800 dark:text-teal-300";
 
   return (
     <div
@@ -267,23 +270,25 @@ function ConfirmDialog({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-zinc-900 border border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
+        className="relative bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-zinc-100 mb-2">{title}</h3>
+        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+          {title}
+        </h3>
         <div className="text-sm text-zinc-500 mb-6 space-y-1">{message}</div>
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg border border-red-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 text-sm font-medium rounded-lg border border-red-200 dark:border-red-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {loading && (
               <svg
@@ -334,7 +339,7 @@ function Toggle({
         onChange(!checked);
       }}
       className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 disabled:opacity-40 disabled:cursor-not-allowed ${
-        checked ? "bg-teal-600" : "bg-zinc-700"
+        checked ? "bg-teal-600" : "bg-zinc-200 dark:bg-zinc-700"
       }`}
     >
       <span
@@ -373,14 +378,16 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <label className="text-xs font-medium text-zinc-400 block mb-1.5">
+      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 block mb-1.5">
         {label}
-        {required && <span className="text-teal-400 ml-0.5">*</span>}
+        {required && (
+          <span className="text-teal-700 dark:text-teal-400 ml-0.5">*</span>
+        )}
         {hint && <span className="text-zinc-600 ml-1 font-normal">{hint}</span>}
       </label>
       {children}
       {typeof error === "string" && error && (
-        <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+        <p className="mt-1.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-1">
           <svg
             className="w-3 h-3 shrink-0"
             fill="none"
@@ -402,10 +409,10 @@ function Field({
 }
 
 const getInputClass = (hasError?: boolean | string) =>
-  `w-full bg-zinc-800 border rounded-lg px-3 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors ${
+  `w-full bg-zinc-100 dark:bg-zinc-800 border rounded-lg px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors ${
     hasError
-      ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
-      : "border-zinc-700 focus:border-teal-500 focus:ring-teal-500/30"
+      ? "border-red-300 dark:border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
+      : "border-zinc-300 dark:border-zinc-700 focus:border-teal-500 focus:ring-teal-500/30"
   }`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -419,13 +426,11 @@ type FormData = {
   status: CustomerStatus;
   phone: string;
   address: string;
-  username: string;
-  password: string;
 };
 
 type FormErrors = Partial<Record<keyof FormData, string>>;
 
-type ExtraUserForm = CustomerAccess & {
+type CredentialForm = Credential & {
   password: string;
   isNewPasswordGenerated: boolean;
   hasCopiedPassword: boolean;
@@ -440,8 +445,6 @@ const emptyForm: FormData = {
   status: "PENDING",
   phone: "",
   address: "",
-  username: "",
-  password: "",
 };
 
 type ServiceState = Record<number, boolean>;
@@ -466,11 +469,6 @@ export default function CustomerForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Password UI state ──
-  const [showPassword, setShowPassword] = useState(false);
-  const [hasCopiedPassword, setHasCopiedPassword] = useState(false);
-  const [isNewPasswordGenerated, setIsNewPasswordGenerated] = useState(false);
-
   // ── Toast ──
   const [toast, setToast] = useState<{
     message: string;
@@ -482,14 +480,9 @@ export default function CustomerForm() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // ── Username auto-derive tracking ──
-  const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false);
-  const [extraUsers, setExtraUsers] = useState<ExtraUserForm[]>([]);
-  const [extraUserErrors, setExtraUserErrors] = useState<
+  const [credentials, setCredentials] = useState<CredentialForm[]>([]);
+  const [credentialErrors, setCredentialErrors] = useState<
     Record<string, string>
-  >({});
-  const [shownExtraPasswords, setShownExtraPasswords] = useState<
-    Record<string, boolean>
   >({});
 
   // Per-instance payment tracking: instanceId → { lastPaymentDate, justRecorded }
@@ -552,16 +545,11 @@ export default function CustomerForm() {
           status: customerData.status,
           phone: customerData.phone ?? "",
           address: customerData.address ?? "",
-          username: customerData.username ?? "",
-          password: "",
         });
-        setUsernameManuallyEdited(true);
 
-        setIsNewPasswordGenerated(false);
-        setHasCopiedPassword(true);
-        setExtraUsers(
-          (customerData.extraUsers ?? []).map((extraUser) => ({
-            ...extraUser,
+        setCredentials(
+          (customerData.credentials ?? []).map((credential) => ({
+            ...credential,
             password: "",
             isNewPasswordGenerated: false,
             hasCopiedPassword: true,
@@ -602,11 +590,7 @@ export default function CustomerForm() {
         setAppServices(svcState);
         setInstancePayments(paymentState);
       } else {
-        setExtraUsers([]);
-        setForm((f) => ({ ...f, password: generatePassword() }));
-        setIsNewPasswordGenerated(true);
-        setHasCopiedPassword(false);
-        setShowPassword(true);
+        setCredentials([]);
       }
     } catch (loadError) {
       if (
@@ -644,48 +628,18 @@ export default function CustomerForm() {
   };
 
   const handleNameChange = (name: string) => {
-    setForm((currentForm) => ({
-      ...currentForm,
-      name,
-      ...(!isEdit && !usernameManuallyEdited
-        ? { username: deriveUsername(name) }
-        : {}),
-    }));
+    setForm((currentForm) => ({ ...currentForm, name }));
     if (fieldErrors.name) {
       setFieldErrors((prev) => ({ ...prev, name: undefined }));
     }
   };
 
-  const handleUsernameChange = (val: string) => {
-    setUsernameManuallyEdited(true);
-    setField("username", val);
-  };
-
-  const handleRegenPassword = () => {
-    const newPass = generatePassword();
-    setField("password", newPass);
-    setShowPassword(true);
-    setIsNewPasswordGenerated(true);
-    setHasCopiedPassword(false);
-    showToast("Contraseña regenerada");
-  };
-
-  const handleCopyPassword = async () => {
-    if (!form.password) return;
-    try {
-      await navigator.clipboard.writeText(form.password);
-      setHasCopiedPassword(true);
-      showToast("Contraseña copiada al portapapeles", "info");
-    } catch {
-      showToast("No se pudo copiar. Cópiala manualmente.", "error");
-    }
-  };
-
-  const addExtraUser = () => {
-    setExtraUsers((users) => [
+  const addCredential = () => {
+    setCredentials((users) => [
       ...users,
       {
         id: crypto.randomUUID(),
+        name: "",
         username: "",
         password: generatePassword(),
         isNewPasswordGenerated: true,
@@ -694,34 +648,43 @@ export default function CustomerForm() {
     ]);
   };
 
-  const updateExtraUser = (index: number, changes: Partial<ExtraUserForm>) => {
-    setExtraUsers((users) =>
+  const updateCredential = (
+    index: number,
+    changes: Partial<CredentialForm>,
+  ) => {
+    setCredentials((users) =>
       users.map((user, currentIndex) =>
         currentIndex === index ? { ...user, ...changes } : user,
       ),
     );
     if (changes.username?.trim() || changes.password) {
-      setExtraUserErrors((errors) => ({
+      setCredentialErrors((errors) => ({
         ...errors,
-        [extraUsers[index]?.id ?? index]: "",
+        [credentials[index]?.id ?? index]: "",
       }));
     }
   };
 
-  const regenerateExtraPassword = (index: number) => {
-    updateExtraUser(index, {
+  const handleGenerateCredentialUsername = (index: number) => {
+    const credential = credentials[index];
+    if (!credential?.name.trim()) return;
+    updateCredential(index, { username: deriveUsername(credential.name) });
+  };
+
+  const regenerateCredentialPassword = (index: number) => {
+    updateCredential(index, {
       password: generatePassword(),
       isNewPasswordGenerated: true,
       hasCopiedPassword: false,
     });
   };
 
-  const copyExtraPassword = async (index: number) => {
-    const extraUser = extraUsers[index];
-    if (!extraUser?.password) return;
+  const copyCredentialPassword = async (index: number) => {
+    const credential = credentials[index];
+    if (!credential?.password) return;
     try {
-      await navigator.clipboard.writeText(extraUser.password);
-      updateExtraUser(index, { hasCopiedPassword: true });
+      await navigator.clipboard.writeText(credential.password);
+      updateCredential(index, { hasCopiedPassword: true });
       showToast("Contraseña copiada al portapapeles", "info");
     } catch {
       showToast("No se pudo copiar. Cópiala manualmente.", "error");
@@ -854,28 +817,26 @@ export default function CustomerForm() {
     if (!form.name.trim()) errors.name = "El nombre es obligatorio.";
     if (!form.email.trim()) errors.email = "El correo es obligatorio.";
     if (!form.dni.trim()) errors.dni = "El DNI/NIE es obligatorio.";
-    if (!form.username.trim())
-      errors.username = "El nombre de usuario es obligatorio.";
-    if (isNewPasswordGenerated && !hasCopiedPassword) {
-      errors.password = "Debes copiar la contraseña antes de guardar.";
-    }
 
     const extraErrors: Record<string, string> = {};
-    extraUsers.forEach((extraUser, index) => {
-      if (!extraUser.username.trim()) {
-        extraErrors[extraUser.id ?? String(index)] =
-          "El nombre de usuario es obligatorio.";
+    credentials.forEach((credential, index) => {
+      if (!credential.name.trim()) {
+        extraErrors[credential.id ?? String(index)] =
+          "El nombre es obligatorio.";
+      } else if (!credential.username.trim()) {
+        extraErrors[credential.id ?? String(index)] =
+          "Genera el usuario a partir del nombre.";
       } else if (
-        extraUser.isNewPasswordGenerated &&
-        !extraUser.hasCopiedPassword
+        credential.isNewPasswordGenerated &&
+        !credential.hasCopiedPassword
       ) {
-        extraErrors[extraUser.id ?? String(index)] =
+        extraErrors[credential.id ?? String(index)] =
           "Debes copiar la contraseña antes de guardar.";
       }
     });
 
     setFieldErrors(errors);
-    setExtraUserErrors(extraErrors);
+    setCredentialErrors(extraErrors);
     return (
       Object.keys(errors).length === 0 && Object.keys(extraErrors).length === 0
     );
@@ -918,19 +879,15 @@ export default function CustomerForm() {
         status: form.status,
         phone: form.phone.trim(),
         address: form.address.trim(),
-        username: form.username.trim(),
-        extraUsers: extraUsers.map(
-          ({ id, username, password, isNewPasswordGenerated }) => ({
+        credentials: credentials.map(
+          ({ id, name, username, password, isNewPasswordGenerated }) => ({
             id,
+            name: name.trim(),
             username: username.trim(),
             ...(isNewPasswordGenerated && password ? { password } : {}),
           }),
         ),
       };
-
-      if (form.password) {
-        payload.password = form.password;
-      }
 
       let savedCustomer: Customer;
       if (isEdit) {
@@ -1014,11 +971,9 @@ export default function CustomerForm() {
         errorMsg.toLowerCase().includes("username") ||
         errorMsg.includes("Unique constraint")
       ) {
-        setFieldErrors({
-          username:
-            "Este nombre de usuario ya está en uso. Por favor, modifícalo.",
-        });
-        setError("El nombre de usuario ya existe.");
+        setError(
+          "Uno de los nombres de usuario ya está en uso. Genera uno nuevo e inténtalo de nuevo.",
+        );
       } else {
         setError(errorMsg || "Error al guardar el cliente.");
       }
@@ -1032,14 +987,14 @@ export default function CustomerForm() {
     return (
       <div className="px-4 sm:px-8 py-8 max-w-3xl mx-auto w-full animate-pulse space-y-8">
         <div className="flex gap-4 mb-8">
-          <div className="w-8 h-8 bg-zinc-800 rounded-lg shrink-0" />
+          <div className="w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-lg shrink-0" />
           <div className="space-y-2 mt-1">
-            <div className="h-5 w-48 bg-zinc-800 rounded" />
-            <div className="h-4 w-64 bg-zinc-800/50 rounded" />
+            <div className="h-5 w-48 bg-zinc-100 dark:bg-zinc-800 rounded" />
+            <div className="h-4 w-64 bg-zinc-100 dark:bg-zinc-800/50 rounded" />
           </div>
         </div>
-        <div className="h-96 bg-zinc-900 border border-zinc-800 rounded-xl" />
-        <div className="h-48 bg-zinc-900 border border-zinc-800 rounded-xl" />
+        <div className="h-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl" />
+        <div className="h-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl" />
       </div>
     );
   }
@@ -1061,7 +1016,7 @@ export default function CustomerForm() {
             <>
               <p>
                 Se eliminará{" "}
-                <span className="text-zinc-300 font-medium">
+                <span className="text-zinc-700 dark:text-zinc-300 font-medium">
                   {customer?.name}
                 </span>{" "}
                 y todos sus datos, instancias y configuraciones.
@@ -1081,7 +1036,7 @@ export default function CustomerForm() {
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={goBack}
-            className="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             title="Volver"
           >
             <svg
@@ -1099,7 +1054,7 @@ export default function CustomerForm() {
             </svg>
           </button>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100">
+            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
               {isEdit ? (customer?.name ?? "Editar cliente") : "Nuevo cliente"}
             </h1>
             <p className="text-sm text-zinc-500 mt-0.5">
@@ -1112,12 +1067,13 @@ export default function CustomerForm() {
 
         <div className="space-y-8">
           {/* ── Section: Info ── */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
             <SectionTitle>Información del cliente</SectionTitle>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
                 label="Nombre"
                 required
+                hint={!isEdit ? "(se usa para generar el usuario)" : undefined}
                 error={fieldErrors.name}
                 className="col-span-full"
               >
@@ -1223,13 +1179,19 @@ export default function CustomerForm() {
           </div>
 
           {/* ── Section: Access credentials ── */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <div className="flex items-center justify-between gap-4">
-              <SectionTitle>Acceso al portal</SectionTitle>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+            <div className="flex items-center justify-between gap-4 mb-1">
+              <div>
+                <SectionTitle>Acceso al portal</SectionTitle>
+                <p className="text-xs text-zinc-500 -mt-3 mb-4">
+                  Usuarios independientes del cliente (camareros, recepción…)
+                  que pueden entrar en el portal.
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={addExtraUser}
-                className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/25 rounded-lg transition-colors"
+                onClick={addCredential}
+                className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
               >
                 <svg
                   className="w-3.5 h-3.5"
@@ -1247,355 +1209,94 @@ export default function CustomerForm() {
                 Añadir usuario
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Username */}
-              <Field
-                label="Usuario"
-                required
-                hint={isEdit ? "(solo lectura)" : undefined}
-                error={fieldErrors.username}
-                className="col-span-full sm:col-span-1"
-              >
-                {isEdit ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      className={`${getInputClass()} bg-zinc-800/50 text-zinc-400 cursor-default`}
-                      value={form.username}
-                      readOnly
-                      tabIndex={-1}
-                    />
-                  </div>
-                ) : (
-                  <input
-                    className={getInputClass(fieldErrors.username)}
-                    placeholder="ana.garcia"
-                    value={form.username}
-                    onChange={(e) =>
-                      handleUsernameChange(
-                        e.target.value.toLowerCase().replace(/\s/g, ""),
-                      )
-                    }
-                    autoComplete="username"
-                  />
-                )}
-              </Field>
 
-              {/* Password */}
-              <Field
-                label="Contraseña"
-                required={isNewPasswordGenerated}
-                hint={
-                  isEdit && !isNewPasswordGenerated
-                    ? "(Deja en blanco para no modificar)"
-                    : undefined
-                }
-                error={fieldErrors.password}
-                className="col-span-full sm:col-span-1"
-              >
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <div className="relative flex-1 min-w-0">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        className={`${getInputClass(fieldErrors.password)} pr-10 cursor-default focus:ring-0 opacity-80`}
-                        placeholder={
-                          isEdit && !isNewPasswordGenerated
-                            ? "••••••••••••"
-                            : "Contraseña del cliente"
-                        }
-                        value={form.password}
-                        readOnly
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        disabled={!form.password}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 transition-colors"
-                        title={
-                          showPassword
-                            ? "Ocultar contraseña"
-                            : "Mostrar contraseña"
-                        }
-                        tabIndex={-1}
-                      >
-                        {showPassword ? (
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleCopyPassword}
-                      disabled={!form.password}
-                      title="Copiar contraseña"
-                      className={`shrink-0 flex items-center justify-center p-2.5 rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
-                        hasCopiedPassword && form.password
-                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                          : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                      }`}
-                    >
-                      {hasCopiedPassword && form.password ? (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M4.5 12.75l6 6 9-13.5"
-                          />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.8}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                          />
-                        </svg>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleRegenPassword}
-                      title="Generar nueva contraseña"
-                      className="shrink-0 flex items-center justify-center p-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 rounded-lg transition-all duration-200"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Warning banner if regenerated but not copied */}
-                  {isNewPasswordGenerated && !hasCopiedPassword && (
-                    <div className="flex items-start gap-2 text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2">
-                      <svg
-                        className="w-4 h-4 shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                      </svg>
-                      Copia la nueva contraseña antes de guardar los cambios.
-                    </div>
-                  )}
-                </div>
-              </Field>
-            </div>
-
-            {extraUsers.length > 0 && (
-              <div className="mt-6 pt-5 border-t border-zinc-800 space-y-4">
-                <p className="text-xs font-medium text-zinc-500">
-                  Usuarios adicionales ({extraUsers.length})
-                </p>
-                {extraUsers.map((extraUser, index) => {
+            {credentials.length === 0 ? (
+              <p className="text-sm text-zinc-600 bg-zinc-50 dark:bg-zinc-950/40 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-6 text-center">
+                Todavía no hay usuarios con acceso al portal. Pulsa "Añadir
+                usuario" para crear el primero.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {credentials.map((credential, index) => {
                   const rowError =
-                    extraUserErrors[extraUser.id] ||
-                    extraUserErrors[String(index)];
-                  const showExtraPassword =
-                    shownExtraPasswords[extraUser.id] ?? false;
+                    credentialErrors[credential.id] ||
+                    credentialErrors[String(index)];
 
                   return (
                     <div
-                      key={extraUser.id}
-                      className="rounded-lg border border-zinc-800 bg-zinc-800/30 p-4"
+                      key={credential.id}
+                      className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30 p-4"
                     >
                       <div className="flex items-center justify-between gap-3 mb-3">
                         <span className="text-xs text-zinc-600">
-                          Usuario adicional {index + 1}
+                          Usuario {index + 1}
                         </span>
                         <button
                           type="button"
                           onClick={() =>
-                            setExtraUsers((users) =>
+                            setCredentials((users) =>
                               users.filter((_, i) => i !== index),
                             )
                           }
-                          className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+                          className="text-xs text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                         >
                           Quitar
                         </button>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Field label="Usuario" error={rowError}>
+                        <Field
+                          label="Nombre"
+                          error={
+                            rowError === "El nombre es obligatorio."
+                              ? rowError
+                              : undefined
+                          }
+                          className="col-span-full"
+                        >
                           <input
-                            className={getInputClass(rowError)}
-                            placeholder="usuario.extra"
-                            value={extraUser.username}
+                            className={getInputClass(
+                              rowError === "El nombre es obligatorio.",
+                            )}
+                            placeholder="Sara García"
+                            value={credential.name}
                             onChange={(event) =>
-                              updateExtraUser(index, {
-                                username: event.target.value
-                                  .toLowerCase()
-                                  .replace(/\s/g, ""),
+                              updateCredential(index, {
+                                name: event.target.value,
                               })
                             }
-                            autoComplete="off"
                           />
                         </Field>
-                        <Field label="Contraseña">
+
+                        <Field
+                          label="Usuario"
+                          hint="(se genera a partir del nombre)"
+                          error={
+                            rowError === "El nombre es obligatorio."
+                              ? undefined
+                              : rowError
+                          }
+                        >
                           <div className="flex gap-2">
-                            <div className="relative flex-1 min-w-0">
-                              <input
-                                type={showExtraPassword ? "text" : "password"}
-                                className={`${getInputClass(rowError)} pr-10 cursor-default focus:ring-0 opacity-80`}
-                                value={extraUser.password}
-                                readOnly
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setShownExtraPasswords((passwords) => ({
-                                    ...passwords,
-                                    [extraUser.id]: !showExtraPassword,
-                                  }))
-                                }
-                                disabled={!extraUser.password}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 transition-colors"
-                                title={
-                                  showExtraPassword
-                                    ? "Ocultar contraseña"
-                                    : "Mostrar contraseña"
-                                }
-                                tabIndex={-1}
-                              >
-                                {showExtraPassword ? (
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={1.8}
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                                    />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={1.8}
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                                    />
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                  </svg>
-                                )}
-                              </button>
-                            </div>
+                            <input
+                              className={`${getInputClass(rowError)} cursor-default focus:ring-0 opacity-80`}
+                              placeholder="Genera el usuario a partir del nombre"
+                              value={credential.username}
+                              readOnly
+                              tabIndex={-1}
+                              autoComplete="off"
+                            />
                             <button
                               type="button"
-                              onClick={() => copyExtraPassword(index)}
-                              title="Copiar contraseña"
-                              disabled={!extraUser.password}
-                              className={`shrink-0 flex items-center justify-center p-2.5 rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${extraUser.hasCopiedPassword && extraUser.password ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"}`}
-                            >
-                              {extraUser.hasCopiedPassword &&
-                              extraUser.password ? (
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M4.5 12.75l6 6 9-13.5"
-                                  />
-                                </svg>
-                              ) : (
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={1.8}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                                  />
-                                </svg>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => regenerateExtraPassword(index)}
-                              title="Generar nueva contraseña"
-                              className="shrink-0 flex items-center justify-center p-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 rounded-lg transition-all duration-200"
+                              onClick={() =>
+                                handleGenerateCredentialUsername(index)
+                              }
+                              disabled={!credential.name.trim()}
+                              title={
+                                credential.name.trim()
+                                  ? "Generar usuario a partir del nombre"
+                                  : "Escribe primero el nombre"
+                              }
+                              className="shrink-0 flex items-center justify-center p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg transition-all duration-200"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -1612,27 +1313,98 @@ export default function CustomerForm() {
                               </svg>
                             </button>
                           </div>
-                          {extraUser.isNewPasswordGenerated &&
-                            !extraUser.hasCopiedPassword && (
-                              <div className="flex items-start gap-2 mt-2 text-xs text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2">
-                                <svg
-                                  className="w-4 h-4 shrink-0"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502 1.667 1.732 3L13.732 4c-.77-1.333-2.694 0-3.464 0L3.34 16c-.77 1.333-.192 3 1.732 3z"
-                                  />
-                                </svg>
-                                Copia la nueva contraseña antes de guardar los
-                                cambios.
-                              </div>
-                            )}
                         </Field>
+
+                        <Field label="Contraseña">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                regenerateCredentialPassword(index)
+                              }
+                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-medium rounded-lg transition-all duration-200"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={1.8}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                                />
+                              </svg>
+                              Generar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyCredentialPassword(index)}
+                              disabled={!credential.password}
+                              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border text-xs font-medium rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${credential.hasCopiedPassword && credential.password ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"}`}
+                            >
+                              {credential.hasCopiedPassword &&
+                              credential.password ? (
+                                <>
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M4.5 12.75l6 6 9-13.5"
+                                    />
+                                  </svg>
+                                  Copiada
+                                </>
+                              ) : (
+                                <>
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={1.8}
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+                                    />
+                                  </svg>
+                                  Copiar
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </Field>
+
+                        {credential.isNewPasswordGenerated &&
+                          !credential.hasCopiedPassword && (
+                            <div className="col-span-full flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-lg px-3 py-2">
+                              <svg
+                                className="w-4 h-4 shrink-0"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502 1.667 1.732 3L13.732 4c-.77-1.333-2.694 0-3.464 0L3.34 16c-.77 1.333-.192 3 1.732 3z"
+                                />
+                              </svg>
+                              Copia la nueva contraseña antes de guardar los
+                              cambios.
+                            </div>
+                          )}
                       </div>
                     </div>
                   );
@@ -1643,7 +1415,7 @@ export default function CustomerForm() {
 
           {/* ── Section: Payment ── */}
           {isEdit && Object.keys(existingInstances).length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
               <SectionTitle>Facturación</SectionTitle>
               <div className="space-y-4">
                 {Object.values(existingInstances).map((inst) => {
@@ -1657,11 +1429,11 @@ export default function CustomerForm() {
                   return (
                     <div
                       key={inst.id}
-                      className="border border-zinc-800 rounded-lg p-4 space-y-4"
+                      className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 space-y-4"
                     >
                       {/* Header: app name + live status badge */}
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <p className="text-sm font-medium text-zinc-300">
+                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                           {inst.application.name}
                         </p>
                         <span
@@ -1751,7 +1523,7 @@ export default function CustomerForm() {
                       <div className="flex items-center justify-between gap-4 text-xs flex-wrap">
                         <span className="text-zinc-500">
                           Último pago:{" "}
-                          <span className="text-zinc-400">
+                          <span className="text-zinc-600 dark:text-zinc-400">
                             {inst.lastPaymentDate
                               ? formatDate(inst.lastPaymentDate)
                               : "sin pagos registrados"}
@@ -1759,7 +1531,7 @@ export default function CustomerForm() {
                         </span>
                         <span className="text-zinc-500">
                           Próximo cobro:{" "}
-                          <span className="text-zinc-400">
+                          <span className="text-zinc-600 dark:text-zinc-400">
                             {formatDate(status.nextDueDate)}
                           </span>
                         </span>
@@ -1783,8 +1555,8 @@ export default function CustomerForm() {
                           onClick={() => recordPayment(inst)}
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium border transition-all duration-300 shrink-0 ${
                             justRecorded
-                              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
-                              : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-teal-500/50 hover:text-teal-300 hover:bg-teal-500/10"
+                              ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+                              : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-teal-300 dark:hover:border-teal-500/50 hover:text-teal-800 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-500/10"
                           }`}
                         >
                           {justRecorded ? (
@@ -1830,7 +1602,7 @@ export default function CustomerForm() {
                         <button
                           type="button"
                           onClick={() => toggleHistory(inst.id)}
-                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300 flex items-center gap-1.5 transition-colors"
+                          className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 flex items-center gap-1.5 transition-colors"
                         >
                           <svg
                             className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
@@ -1864,10 +1636,10 @@ export default function CustomerForm() {
                               history.map((p) => (
                                 <div
                                   key={p.id}
-                                  className="flex items-center justify-between gap-3 text-xs bg-zinc-800/50 rounded-lg px-3 py-2"
+                                  className="flex items-center justify-between gap-3 text-xs bg-zinc-100 dark:bg-zinc-800/50 rounded-lg px-3 py-2"
                                 >
                                   <div className="min-w-0 truncate">
-                                    <span className="text-zinc-300">
+                                    <span className="text-zinc-700 dark:text-zinc-300">
                                       {formatDate(p.paidAt)}
                                     </span>
                                     {p.note && (
@@ -1879,7 +1651,7 @@ export default function CustomerForm() {
                                   <button
                                     type="button"
                                     onClick={() => removePayment(inst.id, p.id)}
-                                    className="text-zinc-600 hover:text-red-400 transition-colors shrink-0"
+                                    className="text-zinc-600 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
                                     title="Eliminar este registro"
                                   >
                                     <svg
@@ -1910,7 +1682,7 @@ export default function CustomerForm() {
           )}
 
           {/* ── Section: Apps ── */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
             <SectionTitle>Aplicaciones contratadas</SectionTitle>
 
             {applications.length === 0 ? (
@@ -1928,8 +1700,8 @@ export default function CustomerForm() {
                       key={app.id}
                       className={`border rounded-xl overflow-hidden transition-colors ${
                         isSelected
-                          ? "border-teal-500/40 bg-teal-500/5"
-                          : "border-zinc-800 bg-zinc-800/30"
+                          ? "border-teal-300 dark:border-teal-500/40 bg-teal-50 dark:bg-teal-500/5"
+                          : "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30"
                       }`}
                     >
                       <div
@@ -1940,7 +1712,7 @@ export default function CustomerForm() {
                           className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
                             isSelected
                               ? "bg-teal-600 border-teal-600"
-                              : "border-zinc-600 bg-zinc-800"
+                              : "border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800"
                           }`}
                         >
                           {isSelected && (
@@ -1961,7 +1733,7 @@ export default function CustomerForm() {
                           )}
                         </div>
                         <span
-                          className={`text-sm font-medium transition-colors ${isSelected ? "text-zinc-100" : "text-zinc-400"}`}
+                          className={`text-sm font-medium transition-colors ${isSelected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"}`}
                         >
                           {app.name}
                         </span>
@@ -1974,7 +1746,7 @@ export default function CustomerForm() {
                       </div>
 
                       {isSelected && app.services.length > 0 && (
-                        <div className="border-t border-teal-500/20 divide-y divide-zinc-800/60">
+                        <div className="border-t border-teal-200 dark:border-teal-500/20 divide-y divide-zinc-200 dark:divide-zinc-800/60">
                           {app.services.map((svc) => {
                             const active = svcMap[svc.id] ?? false;
                             return (
@@ -1983,7 +1755,7 @@ export default function CustomerForm() {
                                 className="flex items-center gap-4 px-5 py-3"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-zinc-300 truncate">
+                                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate">
                                     {svc.name}
                                   </p>
                                   {svc.description && (
@@ -2010,7 +1782,7 @@ export default function CustomerForm() {
                       )}
 
                       {isSelected && app.services.length === 0 && (
-                        <div className="border-t border-teal-500/20 px-5 py-3">
+                        <div className="border-t border-teal-200 dark:border-teal-500/20 px-5 py-3">
                           <p className="text-xs text-zinc-600">
                             Esta aplicación no tiene servicios definidos.
                           </p>
@@ -2025,7 +1797,7 @@ export default function CustomerForm() {
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+            <div className="flex items-start gap-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-4 py-3">
               <svg
                 className="w-4 h-4 shrink-0 mt-0.5"
                 fill="none"
@@ -2052,7 +1824,7 @@ export default function CustomerForm() {
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-500/20 hover:border-red-500/40 text-sm font-medium rounded-lg transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-400/10 border border-red-200 dark:border-red-500/20 hover:border-red-300 dark:hover:border-red-500/40 text-sm font-medium rounded-lg transition-colors"
               >
                 <svg
                   className="w-4 h-4"
@@ -2075,7 +1847,7 @@ export default function CustomerForm() {
               <button
                 type="button"
                 onClick={goBack}
-                className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+                className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
               >
                 Cancelar
               </button>

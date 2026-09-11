@@ -2,14 +2,14 @@
 
 export type UserStatus = "ACTIVE" | "INACTIVE" | "PENDING";
 
-export type CustomerAccess = {
+export type Credential = {
   id: string;
+  name: string;
   username: string;
 };
 
 export type User = {
   id: string;
-  username: string;
   name: string;
   email: string;
   dni: string;
@@ -20,7 +20,7 @@ export type User = {
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
-  extraUsers?: CustomerAccess[];
+  credentials?: Credential[];
   instances: Instance[];
 };
 

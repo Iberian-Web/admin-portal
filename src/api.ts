@@ -29,7 +29,7 @@ import type {
   Application,
   InstanceService,
   Instance,
-  CustomerAccess,
+  Credential,
   BillingFrequency,
   Payment,
 } from "./types";
@@ -41,7 +41,7 @@ export type {
   Application,
   InstanceService,
   Instance,
-  CustomerAccess,
+  Credential,
   BillingFrequency,
   Payment,
 };
