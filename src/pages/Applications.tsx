@@ -5,6 +5,10 @@ import {
   type Application,
   type Service,
 } from "../api";
+import { Icon } from "../components/icons";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { Field, getInputClass } from "../components/FormControls";
+import { getErrorMessage } from "../utils/errors";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const ICONS: Record<string, { color: string; node: React.ReactNode }> = {
@@ -30,21 +34,7 @@ const ICONS: Record<string, { color: string; node: React.ReactNode }> = {
 
 const FALLBACK_ICON = {
   color: "text-teal-700 dark:text-teal-400",
-  node: (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-      />
-    </svg>
-  ),
+  node: <Icon name="grid" className="w-5 h-5" strokeWidth={1.8} />,
 };
 
 function getIcon(key: string) {
@@ -71,7 +61,7 @@ function PriceModal({
     try {
       onSaved(await servicesApi.update(service.id, { price: price.trim() }));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error desconocido");
+      setError(getErrorMessage(e, "Error desconocido"));
       setSaving(false);
     }
   };
@@ -91,14 +81,16 @@ function PriceModal({
         </h3>
         <p className="text-xs text-zinc-500 mb-5">{service.name}</p>
 
-        <input
-          autoFocus
-          className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
-          placeholder="Ej. 29.99"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-        />
+        <Field label="Precio">
+          <input
+            autoFocus
+            className={getInputClass()}
+            placeholder="Ej. 29.99"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
+        </Field>
 
         {error && (
           <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
@@ -160,7 +152,7 @@ function CreateServiceModal({
         }),
       );
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error desconocido");
+      setError(getErrorMessage(e, "Error desconocido"));
       setSaving(false);
     }
   };
@@ -181,43 +173,32 @@ function CreateServiceModal({
         <p className="text-xs text-zinc-500 mb-5">en {appName}</p>
 
         <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 block mb-1.5">
-              Nombre <span className="text-teal-700 dark:text-teal-400">*</span>
-            </label>
+          <Field label="Nombre" required>
             <input
               autoFocus
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
+              className={getInputClass()}
               placeholder="Ej. Pantalla de cocina"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 block mb-1.5">
-              Descripción{" "}
-              <span className="text-zinc-600 font-normal">(opcional)</span>
-            </label>
+          </Field>
+          <Field label="Descripción" hint="(opcional)">
             <input
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
+              className={getInputClass()}
               placeholder="Ej. Vista en tiempo real de pedidos en cocina"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 block mb-1.5">
-              Precio{" "}
-              <span className="text-zinc-600 font-normal">(opcional)</span>
-            </label>
+          </Field>
+          <Field label="Precio" hint="(opcional)">
             <input
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
+              className={getInputClass()}
               placeholder="Ej. 9.99"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submit()}
             />
-          </div>
+          </Field>
         </div>
 
         {error && (
@@ -253,7 +234,9 @@ export default function Applications() {
   const [activeCat, setActiveCat] = useState<number | null>(null);
   const [priceModal, setPriceModal] = useState<Service | null>(null);
   const [creatingService, setCreatingService] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<Service | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -295,8 +278,8 @@ export default function Applications() {
   };
 
   const handleDeleteService = async (svc: Service) => {
-    if (!confirm(`¿Eliminar el servicio "${svc.name}"?`)) return;
     setDeletingId(svc.id);
+    setDeleteError(null);
     try {
       await servicesApi.remove(svc.id);
       setApps((prev) =>
@@ -306,8 +289,9 @@ export default function Applications() {
             : { ...a, services: a.services.filter((s) => s.id !== svc.id) },
         ),
       );
+      setDeleteConfirm(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Error al eliminar el servicio");
+      setDeleteError(getErrorMessage(e, "Error al eliminar el servicio"));
     } finally {
       setDeletingId(null);
     }
@@ -315,15 +299,14 @@ export default function Applications() {
 
   if (loading) {
     return (
-      <div className="px-4 sm:px-8 py-8 max-w-6xl mx-auto w-full">
+      <div className="px-6 lg:px-8 py-6 w-full">
         <p className="text-sm text-zinc-500">Cargando aplicaciones…</p>
       </div>
     );
   }
 
   return (
-    // Reducimos padding horizontal en móvil (px-4) y lo subimos en escritorio (sm:px-8)
-    <div className="px-4 sm:px-8 py-8 max-w-6xl mx-auto w-full">
+    <div className="px-6 lg:px-8 py-6 w-full">
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
           Aplicaciones
@@ -400,19 +383,7 @@ export default function Applications() {
                       onClick={() => setCreatingService(true)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
                     >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 4.5v15m7.5-7.5h-15"
-                        />
-                      </svg>
+                      <Icon name="plus" className="w-3.5 h-3.5" />
                       Añadir servicio
                     </button>
                   </div>
@@ -446,39 +417,15 @@ export default function Applications() {
                               className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
                               title="Editar precio"
                             >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
-                                />
-                              </svg>
+                              <Icon name="pencil" className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => handleDeleteService(svc)}
+                              onClick={() => setDeleteConfirm(svc)}
                               disabled={deletingId === svc.id}
                               className="p-1.5 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-50"
                               title="Eliminar servicio"
                             >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
+                              <Icon name="trash" className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -505,6 +452,33 @@ export default function Applications() {
           appName={cat.name}
           onClose={() => setCreatingService(false)}
           onCreated={handleServiceCreated}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="¿Eliminar servicio?"
+          message={
+            <>
+              Se eliminará{" "}
+              <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                {deleteConfirm.name}
+              </span>
+              . Esta acción no se puede deshacer.
+              {deleteError && (
+                <p className="mt-2 text-xs text-red-700 dark:text-red-400">
+                  {deleteError}
+                </p>
+              )}
+            </>
+          }
+          confirmLabel="Eliminar"
+          loading={deletingId === deleteConfirm.id}
+          onConfirm={() => handleDeleteService(deleteConfirm)}
+          onCancel={() => {
+            setDeleteConfirm(null);
+            setDeleteError(null);
+          }}
         />
       )}
     </div>

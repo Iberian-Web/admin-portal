@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { customersApi, type Customer, type CustomerStatus } from "../api";
+import { Icon } from "../components/icons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,7 +117,7 @@ export default function Customers() {
   }, [customers, search, sortKey, sortDir]);
 
   return (
-    <div className="px-8 py-8 max-w-6xl mx-auto w-full">
+    <div className="px-6 lg:px-8 py-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -131,19 +132,7 @@ export default function Customers() {
           onClick={() => navigate("/customers/new")}
           className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 4.5v15m7.5-7.5h-15"
-            />
-          </svg>
+          <Icon name="plus" className="w-4 h-4" />
           Nuevo cliente
         </button>
       </div>
@@ -179,19 +168,10 @@ export default function Customers() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <svg
+        <Icon
+          name="search"
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-          />
-        </svg>
+        />
         <input
           type="text"
           placeholder="Buscar por nombre, email, empresa, DNI o dominio..."

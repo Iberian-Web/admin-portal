@@ -1,46 +1,22 @@
+// admin-portal/src/components/Sidebar.tsx
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../auth/useAuth";
 import ThemeToggle from "./ThemeToggle";
+import { Icon } from "./icons";
+
+const SIDEBAR_COLLAPSED_KEY = "sidebarCollapsed";
 
 const navItems = [
   {
     to: "/",
     label: "Clientes",
-    icon: (
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-        />
-      </svg>
-    ),
+    icon: <Icon name="users" className="w-4 h-4" strokeWidth={1.8} />,
   },
   {
     to: "/applications",
     label: "Aplicaciones",
-    icon: (
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-        />
-      </svg>
-    ),
+    icon: <Icon name="grid" className="w-4 h-4" strokeWidth={1.8} />,
   },
 ];
 
@@ -48,33 +24,58 @@ const navItems = [
 function SidebarContent({
   onLinkClick,
   handleLogout,
+  collapsed,
+  onToggleCollapse,
 }: {
   onLinkClick?: () => void;
   handleLogout: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   return (
     <>
       {/* Header / Title */}
       <div className="h-16 flex items-center justify-between gap-2 px-5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Administrador
-        </span>
-        <ThemeToggle className="shrink-0" />
+        {!collapsed && (
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Administrador
+          </span>
+        )}
+        <div
+          className={`flex items-center gap-1 ${collapsed ? "mx-auto" : "ml-auto"}`}
+        >
+          {!collapsed && <ThemeToggle className="shrink-0" />}
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="hidden md:flex w-8 h-8 items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0"
+              title={collapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              <Icon
+                name="arrowLeft"
+                className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest px-2 mb-2">
-          Principal
-        </p>
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
+        {!collapsed && (
+          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest px-2 mb-2">
+            Principal
+          </p>
+        )}
         {navItems.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
             end
             onClick={onLinkClick}
+            title={collapsed ? label : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${collapsed ? "justify-center" : ""} ${
                 isActive
                   ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
@@ -82,19 +83,21 @@ function SidebarContent({
             }
           >
             {icon}
-            {label}
+            {!collapsed && label}
           </NavLink>
         ))}
       </nav>
 
       {/* Session actions */}
-      <div className="px-3 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
+      <div className="px-3 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0 space-y-2">
+        {collapsed && <ThemeToggle className="mx-auto" />}
         <button
           onClick={handleLogout}
-          className="w-full px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5"
+          title={collapsed ? "Cerrar sesión" : undefined}
+          className={`w-full px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
         >
           <svg
-            className="w-4 h-4"
+            className="w-4 h-4 shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -106,7 +109,7 @@ function SidebarContent({
               d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
             />
           </svg>
-          Cerrar sesión
+          {!collapsed && "Cerrar sesión"}
         </button>
       </div>
     </>
@@ -118,6 +121,17 @@ export default function Sidebar() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1",
+  );
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      return next;
+    });
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -149,9 +163,7 @@ export default function Sidebar() {
                 }`}
               />
               <span
-                className={`h-0.5 w-full bg-current rounded transition-all duration-300 ${
-                  mobileOpen ? "opacity-0 scale-0" : ""
-                }`}
+                className={`h-0.5 w-full bg-current rounded transition-all duration-300 ${mobileOpen ? "opacity-0 scale-0" : ""}`}
               />
               <span
                 className={`h-0.5 w-full bg-current rounded transform transition-all duration-300 ${
@@ -172,18 +184,26 @@ export default function Sidebar() {
         />
       )}
 
-      {/* ── Mobile drawer ───────────────────────────────────────────────────── */}
+      {/* ── Mobile drawer (opens from top, full width, auto height) ─────────── */}
       <div
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-zinc-900 flex flex-col transform transition-transform duration-300 ease-in-out ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`md:hidden fixed top-0 left-0 right-0 z-50 w-full max-h-[85vh] bg-white dark:bg-zinc-900 flex flex-col rounded-b-2xl shadow-xl overflow-hidden transform origin-top transition-transform duration-300 ease-in-out ${
+          mobileOpen ? "translate-y-0" : "-translate-y-full"
         }`}
       >
         <SidebarContent onLinkClick={closeDrawer} handleLogout={handleLogout} />
       </div>
 
       {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-56 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex-col h-screen sticky top-0">
-        <SidebarContent handleLogout={handleLogout} />
+      <aside
+        className={`hidden md:flex shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex-col h-screen sticky top-0 transition-all duration-200 ${
+          collapsed ? "w-18" : "w-56"
+        }`}
+      >
+        <SidebarContent
+          handleLogout={handleLogout}
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapsed}
+        />
       </aside>
     </>
   );

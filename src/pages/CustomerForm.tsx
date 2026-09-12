@@ -12,6 +12,12 @@ import {
   type BillingFrequency,
   type Payment,
 } from "../api";
+import { Icon, Spinner } from "../components/icons";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Toast, { type ToastVariant } from "../components/Toast";
+import Toggle from "../components/Toggle";
+import { SectionTitle, Field, getInputClass } from "../components/FormControls";
+import { getErrorMessage } from "../utils/errors";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -154,266 +160,6 @@ function getBillingStatus(instance: Instance): BillingStatus {
     nextDueDate,
   };
 }
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-
-type ToastVariant = "success" | "info" | "error";
-
-function Toast({
-  message,
-  variant = "success",
-  onDismiss,
-}: {
-  message: string;
-  variant?: ToastVariant;
-  onDismiss: () => void;
-}) {
-  const colors =
-    variant === "success"
-      ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
-      : variant === "error"
-        ? "bg-red-50 dark:bg-red-500/15 border-red-300 dark:border-red-500/30 text-red-800 dark:text-red-300"
-        : "bg-teal-50 dark:bg-teal-500/15 border-teal-300 dark:border-teal-500/30 text-teal-800 dark:text-teal-300";
-
-  return (
-    <div
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-xl backdrop-blur-sm animate-fade-in ${colors}`}
-    >
-      {variant === "success" ? (
-        <svg
-          className="w-4 h-4 shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4.5 12.75l6 6 9-13.5"
-          />
-        </svg>
-      ) : variant === "error" ? (
-        <svg
-          className="w-4 h-4 shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-      ) : (
-        <svg
-          className="w-4 h-4 shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-          />
-        </svg>
-      )}
-      {message}
-      <button
-        onClick={onDismiss}
-        className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="Cerrar"
-      >
-        <svg
-          className="w-3.5 h-3.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
-// ─── Confirm dialog ───────────────────────────────────────────────────────────
-
-function ConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  loading,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: React.ReactNode;
-  confirmLabel: string;
-  loading: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      onClick={onCancel}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-          {title}
-        </h3>
-        <div className="text-sm text-zinc-500 mb-6 space-y-1">{message}</div>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="px-4 py-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 text-sm font-medium rounded-lg border border-red-200 dark:border-red-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {loading && (
-              <svg
-                className="w-3.5 h-3.5 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
-              </svg>
-            )}
-            {loading ? "Eliminando…" : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Toggle switch ────────────────────────────────────────────────────────────
-
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={(event) => {
-        event.stopPropagation();
-        onChange(!checked);
-      }}
-      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 disabled:opacity-40 disabled:cursor-not-allowed ${
-        checked ? "bg-teal-600" : "bg-zinc-200 dark:bg-zinc-700"
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${checked ? "translate-x-4" : "translate-x-0"}`}
-      />
-    </button>
-  );
-}
-
-// ─── Section header ───────────────────────────────────────────────────────────
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
-      {children}
-    </h2>
-  );
-}
-
-// ─── Field wrapper ────────────────────────────────────────────────────────────
-
-function Field({
-  label,
-  required,
-  hint,
-  error,
-  children,
-  className = "",
-}: {
-  label: string;
-  required?: boolean;
-  hint?: string;
-  error?: string | boolean;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 block mb-1.5">
-        {label}
-        {required && (
-          <span className="text-teal-700 dark:text-teal-400 ml-0.5">*</span>
-        )}
-        {hint && <span className="text-zinc-600 ml-1 font-normal">{hint}</span>}
-      </label>
-      {children}
-      {typeof error === "string" && error && (
-        <p className="mt-1.5 text-xs text-red-700 dark:text-red-400 flex items-center gap-1">
-          <svg
-            className="w-3 h-3 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-            />
-          </svg>
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-const getInputClass = (hasError?: boolean | string) =>
-  `w-full bg-zinc-100 dark:bg-zinc-800 border rounded-lg px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 transition-colors ${
-    hasError
-      ? "border-red-300 dark:border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
-      : "border-zinc-300 dark:border-zinc-700 focus:border-teal-500 focus:ring-teal-500/30"
-  }`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -850,7 +596,7 @@ export default function CustomerForm() {
       await customersApi.remove(id);
       goBack();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al eliminar");
+      setError(getErrorMessage(e, "Error al eliminar"));
       setShowDeleteConfirm(false);
     } finally {
       setDeleting(false);
@@ -965,7 +711,7 @@ export default function CustomerForm() {
 
       goBack();
     } catch (e: unknown) {
-      const errorMsg = e instanceof Error ? e.message : "";
+      const errorMsg = getErrorMessage(e, "");
 
       if (
         errorMsg.toLowerCase().includes("username") ||
@@ -1039,19 +785,7 @@ export default function CustomerForm() {
             className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             title="Volver"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
-              />
-            </svg>
+            <Icon name="arrowLeft" className="w-4 h-4" />
           </button>
           <div>
             <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
@@ -1193,19 +927,7 @@ export default function CustomerForm() {
                 onClick={addCredential}
                 className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
               >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                  />
-                </svg>
+                <Icon name="plus" className="w-3.5 h-3.5" />
                 Añadir usuario
               </button>
             </div>
@@ -1298,19 +1020,11 @@ export default function CustomerForm() {
                               }
                               className="shrink-0 flex items-center justify-center p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg transition-all duration-200"
                             >
-                              <svg
+                              <Icon
+                                name="refresh"
                                 className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
                                 strokeWidth={1.8}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                                />
-                              </svg>
+                              />
                             </button>
                           </div>
                         </Field>
@@ -1324,19 +1038,11 @@ export default function CustomerForm() {
                               }
                               className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-medium rounded-lg transition-all duration-200"
                             >
-                              <svg
+                              <Icon
+                                name="refresh"
                                 className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
                                 strokeWidth={1.8}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                                />
-                              </svg>
+                              />
                               Generar
                             </button>
                             <button
@@ -1348,36 +1054,16 @@ export default function CustomerForm() {
                               {credential.hasCopiedPassword &&
                               credential.password ? (
                                 <>
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M4.5 12.75l6 6 9-13.5"
-                                    />
-                                  </svg>
+                                  <Icon name="check" className="w-3.5 h-3.5" />
                                   Copiada
                                 </>
                               ) : (
                                 <>
-                                  <svg
+                                  <Icon
+                                    name="clipboard"
                                     className="w-3.5 h-3.5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
                                     strokeWidth={1.8}
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                                    />
-                                  </svg>
+                                  />
                                   Copiar
                                 </>
                               )}
@@ -1388,19 +1074,10 @@ export default function CustomerForm() {
                         {credential.isNewPasswordGenerated &&
                           !credential.hasCopiedPassword && (
                             <div className="col-span-full flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-lg px-3 py-2">
-                              <svg
+                              <Icon
+                                name="warningTriangle"
                                 className="w-4 h-4 shrink-0"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502 1.667 1.732 3L13.732 4c-.77-1.333-2.694 0-3.464 0L3.34 16c-.77 1.333-.192 3 1.732 3z"
-                                />
-                              </svg>
+                              />
                               Copia la nueva contraseña antes de guardar los
                               cambios.
                             </div>
@@ -1467,19 +1144,10 @@ export default function CustomerForm() {
                                 </option>
                               ))}
                             </select>
-                            <svg
+                            <Icon
+                              name="chevronDown"
                               className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                              />
-                            </svg>
+                            />
                           </div>
                         </Field>
 
@@ -1502,19 +1170,10 @@ export default function CustomerForm() {
                                 ),
                               )}
                             </select>
-                            <svg
+                            <Icon
+                              name="chevronDown"
                               className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                              />
-                            </svg>
+                            />
                           </div>
                         </Field>
                       </div>
@@ -1561,36 +1220,12 @@ export default function CustomerForm() {
                         >
                           {justRecorded ? (
                             <>
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M4.5 12.75l6 6 9-13.5"
-                                />
-                              </svg>
+                              <Icon name="check" className="w-3.5 h-3.5" />
                               Registrado
                             </>
                           ) : (
                             <>
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M12 4.5v15m7.5-7.5h-15"
-                                />
-                              </svg>
+                              <Icon name="plus" className="w-3.5 h-3.5" />
                               Registrar pago
                             </>
                           )}
@@ -1604,19 +1239,10 @@ export default function CustomerForm() {
                           onClick={() => toggleHistory(inst.id)}
                           className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 flex items-center gap-1.5 transition-colors"
                         >
-                          <svg
+                          <Icon
+                            name="chevronDown"
                             className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                            />
-                          </svg>
+                          />
                           {isExpanded
                             ? "Ocultar historial"
                             : "Ver historial de pagos"}
@@ -1654,19 +1280,10 @@ export default function CustomerForm() {
                                     className="text-zinc-600 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
                                     title="Eliminar este registro"
                                   >
-                                    <svg
+                                    <Icon
+                                      name="close"
                                       className="w-3.5 h-3.5"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                      strokeWidth={2}
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
+                                    />
                                   </button>
                                 </div>
                               ))
@@ -1826,19 +1443,7 @@ export default function CustomerForm() {
                 onClick={() => setShowDeleteConfirm(true)}
                 className="flex items-center justify-center gap-2 px-4 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-400/10 border border-red-200 dark:border-red-500/20 hover:border-red-300 dark:hover:border-red-500/40 text-sm font-medium rounded-lg transition-colors"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                  />
-                </svg>
+                <Icon name="trash" className="w-4 h-4" strokeWidth={1.8} />
                 Eliminar cliente
               </button>
             )}
@@ -1857,27 +1462,7 @@ export default function CustomerForm() {
                 disabled={saving}
                 className="flex items-center gap-2 px-5 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                {saving && (
-                  <svg
-                    className="w-3.5 h-3.5 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v8H4z"
-                    />
-                  </svg>
-                )}
+                {saving && <Spinner className="w-3.5 h-3.5" />}
                 {saving
                   ? "Guardando…"
                   : isEdit
