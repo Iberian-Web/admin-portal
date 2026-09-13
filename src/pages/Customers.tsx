@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { customersApi, type Customer, type CustomerStatus } from "../api";
 import { Icon } from "../components/icons";
+import { statusLabel } from "../utils/customerStatus";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,12 +10,6 @@ type SortKey = "name" | "email" | "company" | "status" | "createdAt" | "dni";
 type SortDir = "asc" | "desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const statusLabel: Record<CustomerStatus, string> = {
-  ACTIVE: "Activo",
-  INACTIVE: "Inactivo",
-  PENDING: "Pendiente",
-};
 
 const statusStyles: Record<CustomerStatus, string> = {
   ACTIVE:

@@ -4,8 +4,10 @@ import {
   customersApi,
   applicationsApi,
   instancesApi,
+  credentialsApi,
   type Customer,
   type Credential,
+  type CredentialServicePermission,
   type CustomerStatus,
   type Application,
   type Instance,
@@ -14,18 +16,14 @@ import {
 } from "../api";
 import { Icon, Spinner } from "../components/icons";
 import ConfirmDialog from "../components/ConfirmDialog";
+import Modal from "../components/Modal";
 import Toast, { type ToastVariant } from "../components/Toast";
 import Toggle from "../components/Toggle";
 import { SectionTitle, Field, getInputClass } from "../components/FormControls";
 import { getErrorMessage } from "../utils/errors";
+import { statusLabel } from "../utils/customerStatus";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const statusLabel: Record<CustomerStatus, string> = {
-  ACTIVE: "Activo",
-  INACTIVE: "Inactivo",
-  PENDING: "Pendiente",
-};
 
 /** Generates a secure random password: 3 groups of 4 alphanumeric chars separated by dashes */
 function generatePassword(): string {
@@ -196,6 +194,109 @@ const emptyForm: FormData = {
 type ServiceState = Record<number, boolean>;
 type AppServices = Record<number, ServiceState>;
 
+// ─── Credential service permissions modal ─────────────────────────────────────
+function CredentialServicesModal({
+  credentialId,
+  credentialName,
+  onClose,
+}: {
+  credentialId: string;
+  credentialName: string;
+  onClose: () => void;
+}) {
+  const [services, setServices] = useState<
+    CredentialServicePermission[] | null
+  >(null);
+  const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    credentialsApi
+      .listServices(credentialId)
+      .then(setServices)
+      .catch((e) =>
+        setError(getErrorMessage(e, "No se pudieron cargar los servicios")),
+      );
+  }, [credentialId]);
+
+  const toggle = async (serviceId: number, enabled: boolean) => {
+    setSavingId(serviceId);
+    setError(null);
+    try {
+      await credentialsApi.setService(credentialId, serviceId, enabled);
+      setServices(
+        (prev) =>
+          prev?.map((s) =>
+            s.serviceId === serviceId ? { ...s, enabled } : s,
+          ) ?? prev,
+      );
+    } catch (e) {
+      setError(getErrorMessage(e, "No se pudo actualizar el servicio"));
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+        Servicios de {credentialName || "este usuario"}
+      </h3>
+      <p className="text-xs text-zinc-500 mb-5">
+        Desactiva un servicio para ocultarlo del menú de este usuario en el
+        portal. Solo se listan los servicios que el cliente tiene activos.
+      </p>
+
+      {error && (
+        <p className="mb-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
+      {!services ? (
+        <p className="text-sm text-zinc-500">Cargando…</p>
+      ) : services.length === 0 ? (
+        <p className="text-sm text-zinc-500">
+          Este cliente no tiene servicios activos todavía.
+        </p>
+      ) : (
+        <div className="space-y-2 max-h-80 overflow-y-auto">
+          {services.map((s) => (
+            <div
+              key={s.serviceId}
+              className="flex items-center justify-between gap-3 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                  {s.name}
+                </p>
+                <p className="text-xs text-zinc-500 truncate">
+                  {s.applicationName}
+                </p>
+              </div>
+              <Toggle
+                checked={s.enabled}
+                disabled={savingId === s.serviceId}
+                onChange={(enabled) => toggle(s.serviceId, enabled)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex justify-end mt-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          Cerrar
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CustomerForm() {
@@ -230,6 +331,9 @@ export default function CustomerForm() {
   const [credentialErrors, setCredentialErrors] = useState<
     Record<string, string>
   >({});
+  const [permissionsFor, setPermissionsFor] = useState<CredentialForm | null>(
+    null,
+  );
 
   // Per-instance payment tracking: instanceId → { lastPaymentDate, justRecorded }
   const [instancePayments, setInstancePayments] = useState<
@@ -373,13 +477,6 @@ export default function CustomerForm() {
     }
   };
 
-  const handleNameChange = (name: string) => {
-    setForm((currentForm) => ({ ...currentForm, name }));
-    if (fieldErrors.name) {
-      setFieldErrors((prev) => ({ ...prev, name: undefined }));
-    }
-  };
-
   const addCredential = () => {
     setCredentials((users) => [
       ...users,
@@ -387,6 +484,7 @@ export default function CustomerForm() {
         id: crypto.randomUUID(),
         name: "",
         username: "",
+        role: "",
         password: generatePassword(),
         isNewPasswordGenerated: true,
         hasCopiedPassword: false,
@@ -626,10 +724,11 @@ export default function CustomerForm() {
         phone: form.phone.trim(),
         address: form.address.trim(),
         credentials: credentials.map(
-          ({ id, name, username, password, isNewPasswordGenerated }) => ({
+          ({ id, name, username, role, password, isNewPasswordGenerated }) => ({
             id,
             name: name.trim(),
             username: username.trim(),
+            role: role.trim(),
             ...(isNewPasswordGenerated && password ? { password } : {}),
           }),
         ),
@@ -815,7 +914,7 @@ export default function CustomerForm() {
                   className={getInputClass(fieldErrors.name)}
                   placeholder="Ana García López"
                   value={form.name}
-                  onChange={(e) => handleNameChange(e.target.value)}
+                  onChange={(e) => setField("name", e.target.value)}
                 />
               </Field>
 
@@ -953,17 +1052,30 @@ export default function CustomerForm() {
                         <span className="text-xs text-zinc-600">
                           Usuario {index + 1}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCredentials((users) =>
-                              users.filter((_, i) => i !== index),
-                            )
-                          }
-                          className="text-xs text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
-                        >
-                          Quitar
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {customer?.credentials?.some(
+                            (c) => c.id === credential.id,
+                          ) && (
+                            <button
+                              type="button"
+                              onClick={() => setPermissionsFor(credential)}
+                              className="text-xs text-teal-800 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-200 transition-colors"
+                            >
+                              Permisos
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCredentials((users) =>
+                                users.filter((_, i) => i !== index),
+                              )
+                            }
+                            className="text-xs text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                          >
+                            Quitar
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Field
@@ -973,7 +1085,6 @@ export default function CustomerForm() {
                               ? rowError
                               : undefined
                           }
-                          className="col-span-full"
                         >
                           <input
                             className={getInputClass(
@@ -1027,6 +1138,19 @@ export default function CustomerForm() {
                               />
                             </button>
                           </div>
+                        </Field>
+
+                        <Field label="Rol" hint="(opcional)">
+                          <input
+                            className={getInputClass()}
+                            placeholder="Camarero, Cocina, Encargado…"
+                            value={credential.role}
+                            onChange={(event) =>
+                              updateCredential(index, {
+                                role: event.target.value,
+                              })
+                            }
+                          />
                         </Field>
 
                         <Field label="Contraseña">
@@ -1473,6 +1597,14 @@ export default function CustomerForm() {
           </div>
         </div>
       </div>
+
+      {permissionsFor && (
+        <CredentialServicesModal
+          credentialId={permissionsFor.id}
+          credentialName={permissionsFor.name}
+          onClose={() => setPermissionsFor(null)}
+        />
+      )}
     </>
   );
 }

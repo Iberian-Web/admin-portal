@@ -9,6 +9,7 @@ import { Icon } from "../components/icons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { Field, getInputClass } from "../components/FormControls";
 import { getErrorMessage } from "../utils/errors";
+import Modal from "../components/Modal";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const ICONS: Record<string, { color: string; node: React.ReactNode }> = {
@@ -67,54 +68,45 @@ function PriceModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-          Editar precio
-        </h3>
-        <p className="text-xs text-zinc-500 mb-5">{service.name}</p>
+    <Modal onClose={onClose}>
+      <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+        Editar precio
+      </h3>
+      <p className="text-xs text-zinc-500 mb-5">{service.name}</p>
 
-        <Field label="Precio">
-          <input
-            autoFocus
-            className={getInputClass()}
-            placeholder="Ej. 29.99"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-        </Field>
+      <Field label="Precio">
+        <input
+          autoFocus
+          className={getInputClass()}
+          placeholder="Ej. 29.99"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
+      </Field>
 
-        {error && (
-          <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
+      {error && (
+        <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
 
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={submit}
-            disabled={saving}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {saving ? "Guardando…" : "Guardar"}
-          </button>
-        </div>
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={submit}
+          disabled={saving}
+          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -158,72 +150,63 @@ function CreateServiceModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg w-full max-w-sm p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-          Nuevo servicio
-        </h3>
-        <p className="text-xs text-zinc-500 mb-5">en {appName}</p>
+    <Modal onClose={onClose}>
+      <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+        Nuevo servicio
+      </h3>
+      <p className="text-xs text-zinc-500 mb-5">en {appName}</p>
 
-        <div className="space-y-3">
-          <Field label="Nombre" required>
-            <input
-              autoFocus
-              className={getInputClass()}
-              placeholder="Ej. Pantalla de cocina"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </Field>
-          <Field label="Descripción" hint="(opcional)">
-            <input
-              className={getInputClass()}
-              placeholder="Ej. Vista en tiempo real de pedidos en cocina"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </Field>
-          <Field label="Precio" hint="(opcional)">
-            <input
-              className={getInputClass()}
-              placeholder="Ej. 9.99"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
-            />
-          </Field>
-        </div>
-
-        {error && (
-          <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={submit}
-            disabled={saving}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {saving ? "Creando…" : "Crear servicio"}
-          </button>
-        </div>
+      <div className="space-y-3">
+        <Field label="Nombre" required>
+          <input
+            autoFocus
+            className={getInputClass()}
+            placeholder="Ej. Pantalla de cocina"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+        <Field label="Descripción" hint="(opcional)">
+          <input
+            className={getInputClass()}
+            placeholder="Ej. Vista en tiempo real de pedidos en cocina"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </Field>
+        <Field label="Precio" hint="(opcional)">
+          <input
+            className={getInputClass()}
+            placeholder="Ej. 9.99"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
+        </Field>
       </div>
-    </div>
+
+      {error && (
+        <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={submit}
+          disabled={saving}
+          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          {saving ? "Creando…" : "Crear servicio"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

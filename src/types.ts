@@ -6,6 +6,14 @@ export type Credential = {
   id: string;
   name: string;
   username: string;
+  role: string;
+};
+
+export type CredentialServicePermission = {
+  serviceId: number;
+  name: string;
+  applicationName: string;
+  enabled: boolean;
 };
 
 export type User = {

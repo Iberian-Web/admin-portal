@@ -30,6 +30,7 @@ import type {
   InstanceService,
   Instance,
   Credential,
+  CredentialServicePermission,
   BillingFrequency,
   Payment,
 } from "./types";
@@ -42,6 +43,7 @@ export type {
   InstanceService,
   Instance,
   Credential,
+  CredentialServicePermission,
   BillingFrequency,
   Payment,
 };
@@ -172,6 +174,24 @@ export const instancesApi = {
       {
         method: "PUT",
         body: JSON.stringify(data),
+      },
+    ),
+};
+
+// ─── Credential (per-user) service permissions ───────────────────────────────
+
+export const credentialsApi = {
+  listServices: (credentialId: string) =>
+    request<CredentialServicePermission[]>(
+      `/api/credentials/${credentialId}/services`,
+    ),
+
+  setService: (credentialId: string, serviceId: number, enabled: boolean) =>
+    request<{ enabled: boolean }>(
+      `/api/credentials/${credentialId}/services/${serviceId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ enabled }),
       },
     ),
 };
