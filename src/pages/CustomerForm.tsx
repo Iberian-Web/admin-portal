@@ -1,4 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ChevronsUpDown } from "lucide-react";
+import {
+  useQuery,
+  useQueries,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   customersApi,
@@ -9,17 +16,16 @@ import {
   type Credential,
   type CredentialServicePermission,
   type CustomerStatus,
-  type Application,
   type Instance,
   type BillingFrequency,
-  type Payment,
 } from "../api";
 import { Icon, Spinner } from "../components/icons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import Toast, { type ToastVariant } from "../components/Toast";
 import Toggle from "../components/Toggle";
-import { SectionTitle, Field, getInputClass } from "../components/FormControls";
+import { SectionTitle, Field } from "../components/FormControls";
+import { getInputClass } from "../utils/inputClass";
 import { getErrorMessage } from "../utils/errors";
 import { statusLabel } from "../utils/customerStatus";
 
@@ -204,38 +210,41 @@ function CredentialServicesModal({
   credentialName: string;
   onClose: () => void;
 }) {
-  const [services, setServices] = useState<
-    CredentialServicePermission[] | null
-  >(null);
-  const [error, setError] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const queryKey = ["credentialServices", credentialId];
 
-  useEffect(() => {
-    credentialsApi
-      .listServices(credentialId)
-      .then(setServices)
-      .catch((e) =>
-        setError(getErrorMessage(e, "No se pudieron cargar los servicios")),
-      );
-  }, [credentialId]);
+  const {
+    data: services,
+    isLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey,
+    queryFn: () => credentialsApi.listServices(credentialId),
+  });
+  const loadError = queryError
+    ? getErrorMessage(queryError, "No se pudieron cargar los servicios")
+    : null;
 
-  const toggle = async (serviceId: number, enabled: boolean) => {
-    setSavingId(serviceId);
-    setError(null);
-    try {
-      await credentialsApi.setService(credentialId, serviceId, enabled);
-      setServices(
-        (prev) =>
-          prev?.map((s) =>
-            s.serviceId === serviceId ? { ...s, enabled } : s,
-          ) ?? prev,
+  const toggleMutation = useMutation({
+    mutationFn: ({
+      serviceId,
+      enabled,
+    }: {
+      serviceId: number;
+      enabled: boolean;
+    }) => credentialsApi.setService(credentialId, serviceId, enabled),
+    onSuccess: (_data, { serviceId, enabled }) => {
+      queryClient.setQueryData(
+        queryKey,
+        (prev?: CredentialServicePermission[]) =>
+          prev?.map((s) => (s.serviceId === serviceId ? { ...s, enabled } : s)),
       );
-    } catch (e) {
-      setError(getErrorMessage(e, "No se pudo actualizar el servicio"));
-    } finally {
-      setSavingId(null);
-    }
-  };
+    },
+  });
+  const toggleError = toggleMutation.isError
+    ? getErrorMessage(toggleMutation.error, "No se pudo actualizar el servicio")
+    : null;
+  const displayError = loadError ?? toggleError;
 
   return (
     <Modal onClose={onClose}>
@@ -247,15 +256,15 @@ function CredentialServicesModal({
         portal. Solo se listan los servicios que el cliente tiene activos.
       </p>
 
-      {error && (
+      {displayError && (
         <p className="mb-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
-          {error}
+          {displayError}
         </p>
       )}
 
-      {!services ? (
+      {isLoading ? (
         <p className="text-sm text-zinc-500">Cargando…</p>
-      ) : services.length === 0 ? (
+      ) : !services || services.length === 0 ? (
         <p className="text-sm text-zinc-500">
           Este cliente no tiene servicios activos todavía.
         </p>
@@ -276,8 +285,13 @@ function CredentialServicesModal({
               </div>
               <Toggle
                 checked={s.enabled}
-                disabled={savingId === s.serviceId}
-                onChange={(enabled) => toggle(s.serviceId, enabled)}
+                disabled={
+                  toggleMutation.isPending &&
+                  toggleMutation.variables?.serviceId === s.serviceId
+                }
+                onChange={(enabled) =>
+                  toggleMutation.mutate({ serviceId: s.serviceId, enabled })
+                }
               />
             </div>
           ))}
@@ -304,16 +318,15 @@ export default function CustomerForm() {
   const navigate = useNavigate();
   const goBack = () => navigate("/");
   const isEdit = !!id && id !== "new";
+  const queryClient = useQueryClient();
 
   // ── Data state ──
   const [customer, setCustomer] = useState<Customer | null>(null);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   // ── Form state ──
   const [form, setForm] = useState<FormData>(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Toast ──
@@ -325,7 +338,6 @@ export default function CustomerForm() {
 
   // ── Delete state ──
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const [credentials, setCredentials] = useState<CredentialForm[]>([]);
   const [credentialErrors, setCredentialErrors] = useState<
@@ -340,14 +352,12 @@ export default function CustomerForm() {
     Record<number, { lastPaymentDate: string | null; justRecorded: boolean }>
   >({});
 
-  // Payment history: instanceId → payments (fetched lazily on first expand)
-  const [paymentHistory, setPaymentHistory] = useState<
-    Record<number, Payment[]>
-  >({});
+  // Historial de pagos: se expande/colapsa aquí; la carga en sí la gestiona
+  // useQueries más abajo (una query por instancia, solo activa si está
+  // expandida).
   const [expandedHistory, setExpandedHistory] = useState<Set<number>>(
     new Set(),
   );
-  const [loadingHistory, setLoadingHistory] = useState<Set<number>>(new Set());
   const [paymentNotes, setPaymentNotes] = useState<Record<number, string>>({});
 
   // ── App + service selection ──
@@ -375,99 +385,108 @@ export default function CustomerForm() {
   }, []);
 
   // ─ Load data ─
-  const load = useCallback(async () => {
-    try {
-      const [apps, customerData] = await Promise.all([
-        applicationsApi.list(),
-        isEdit ? customersApi.get(id!) : Promise.resolve(null),
-      ]);
+  const { data: applications = [], isLoading: appsLoading } = useQuery({
+    queryKey: ["applications"],
+    queryFn: () => applicationsApi.list(),
+  });
+  const {
+    data: customerData,
+    isLoading: customerLoading,
+    error: customerQueryError,
+  } = useQuery({
+    queryKey: ["customers", id],
+    queryFn: () => customersApi.get(id!),
+    enabled: isEdit,
+    retry: false,
+  });
+  const loading = appsLoading || (isEdit && (customerLoading || !initialized));
 
-      setApplications(apps);
+  const isNotFoundError = (err: unknown) =>
+    err instanceof Error &&
+    "status" in err &&
+    (err as { status?: number }).status === 404;
 
-      if (customerData) {
-        setCustomer(customerData);
-        setForm({
-          name: customerData.name,
-          email: customerData.email,
-          company: customerData.company,
-          dni: customerData.dni,
-          domains: customerData.domains.join(", "),
-          status: customerData.status,
-          phone: customerData.phone ?? "",
-          address: customerData.address ?? "",
-        });
-
-        setCredentials(
-          (customerData.credentials ?? []).map((credential) => ({
-            ...credential,
-            password: "",
-            isNewPasswordGenerated: false,
-            hasCopiedPassword: true,
-          })),
-        );
-
-        const instMap: Record<number, Instance> = {};
-        const selApps = new Set<number>();
-        const svcState: AppServices = {};
-        const paymentState: Record<
-          number,
-          { lastPaymentDate: string | null; justRecorded: boolean }
-        > = {};
-
-        for (const inst of customerData.instances) {
-          instMap[inst.applicationId] = inst;
-          selApps.add(inst.applicationId);
-          paymentState[inst.id] = {
-            lastPaymentDate: inst.lastPaymentDate ?? null,
-            justRecorded: false,
-          };
-
-          const svcMap: ServiceState = {};
-          for (const is of inst.instanceServices) {
-            svcMap[is.serviceId] = is.active;
-          }
-          const app = apps.find((a) => a.id === inst.applicationId);
-          if (app) {
-            for (const svc of app.services) {
-              if (!(svc.id in svcMap)) svcMap[svc.id] = false;
-            }
-          }
-          svcState[inst.applicationId] = svcMap;
-        }
-
-        setExistingInstances(instMap);
-        setSelectedApps(selApps);
-        setAppServices(svcState);
-        setInstancePayments(paymentState);
-      } else {
-        setCredentials([]);
-      }
-    } catch (loadError) {
-      if (
-        isEdit &&
-        loadError instanceof Error &&
-        "status" in loadError &&
-        loadError.status === 404
-      ) {
-        navigate("/", { replace: true });
-        return;
-      }
-
-      setError(
-        "Error al cargar los datos. Por favor, revisa tu conexión o intenta más tarde.",
-      );
-      showToast("Error de carga", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, isEdit, navigate, showToast]);
-
+  // Si el cliente no existe (404), volvemos al listado y avisamos con un
+  // toast — reaccionar a un error de useQuery con un efecto es el patrón
+  // que la propia documentación de TanStack Query recomienda (v5 quitó
+  // onError/onSuccess de useQuery a propósito, en favor de esto).
   useEffect(() => {
-    const loadData = async () => {
-      await load();
-    };
-    void loadData();
-  }, [load]);
+    if (!isEdit || !customerQueryError) return;
+    if (isNotFoundError(customerQueryError)) {
+      navigate("/", { replace: true });
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- notificación puntual por error de carga, no estado derivado
+    showToast("Error de carga", "error");
+  }, [isEdit, customerQueryError, navigate, showToast]);
+
+  const loadError =
+    isEdit && customerQueryError && !isNotFoundError(customerQueryError)
+      ? "Error al cargar los datos. Por favor, revisa tu conexión o intenta más tarde."
+      : null;
+
+  // Siembra el formulario y todo el estado derivado (credenciales,
+  // instancias, servicios, pagos) una sola vez, cuando ya han llegado tanto
+  // el cliente como el catálogo de aplicaciones. Va en el cuerpo del render
+  // (no en un efecto): es una adaptación de estado a partir de datos ya
+  // cargados, no una sincronización con un sistema externo.
+  if (isEdit && !initialized && customerData && !appsLoading) {
+    setInitialized(true);
+    setCustomer(customerData);
+    setForm({
+      name: customerData.name,
+      email: customerData.email,
+      company: customerData.company,
+      dni: customerData.dni,
+      domains: customerData.domains.join(", "),
+      status: customerData.status,
+      phone: customerData.phone ?? "",
+      address: customerData.address ?? "",
+    });
+
+    setCredentials(
+      (customerData.credentials ?? []).map((credential) => ({
+        ...credential,
+        password: "",
+        isNewPasswordGenerated: false,
+        hasCopiedPassword: true,
+      })),
+    );
+
+    const instMap: Record<number, Instance> = {};
+    const selApps = new Set<number>();
+    const svcState: AppServices = {};
+    const paymentState: Record<
+      number,
+      { lastPaymentDate: string | null; justRecorded: boolean }
+    > = {};
+
+    for (const inst of customerData.instances) {
+      instMap[inst.applicationId] = inst;
+      selApps.add(inst.applicationId);
+      paymentState[inst.id] = {
+        lastPaymentDate: inst.lastPaymentDate ?? null,
+        justRecorded: false,
+      };
+
+      const svcMap: ServiceState = {};
+      for (const is of inst.instanceServices) {
+        svcMap[is.serviceId] = is.active;
+      }
+      const app = applications.find((a) => a.id === inst.applicationId);
+      if (app) {
+        for (const svc of app.services) {
+          if (!(svc.id in svcMap)) svcMap[svc.id] = false;
+        }
+      }
+      svcState[inst.applicationId] = svcMap;
+    }
+
+    setExistingInstances(instMap);
+    setSelectedApps(selApps);
+    setAppServices(svcState);
+    setInstancePayments(paymentState);
+  }
 
   // ─ Handlers ─
   const setField = (field: keyof FormData, val: string) => {
@@ -562,13 +581,25 @@ export default function CustomerForm() {
     }));
   };
 
-  const recordPayment = async (instance: Instance) => {
-    const note = (paymentNotes[instance.id] ?? "").trim();
-    try {
-      const updated = await instancesApi.recordPayment(
-        instance.id,
-        note || undefined,
-      );
+  // Una query por instancia, activa solo si su historial está expandido.
+  // El orden de `instancesList` es el mismo que usa el useQueries de abajo,
+  // así que sus resultados se correlacionan por índice.
+  const instancesList = Object.values(existingInstances);
+  const paymentHistoryResults = useQueries({
+    queries: instancesList.map((inst) => ({
+      queryKey: ["payments", inst.id],
+      queryFn: () => instancesApi.listPayments(inst.id),
+      enabled: expandedHistory.has(inst.id),
+    })),
+  });
+  const paymentHistoryByInstance = Object.fromEntries(
+    instancesList.map((inst, i) => [inst.id, paymentHistoryResults[i]]),
+  );
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: ({ instance, note }: { instance: Instance; note?: string }) =>
+      instancesApi.recordPayment(instance.id, note),
+    onSuccess: (updated, { instance }) => {
       setExistingInstances((prev) => ({
         ...prev,
         [updated.applicationId]: updated,
@@ -588,70 +619,69 @@ export default function CustomerForm() {
           [instance.id]: { ...prev[instance.id], justRecorded: false },
         }));
       }, 2500);
-      // If the history panel is open, refresh it so the new entry shows up right away
-      if (expandedHistory.has(instance.id)) {
-        const history = await instancesApi.listPayments(instance.id);
-        setPaymentHistory((prev) => ({ ...prev, [instance.id]: history }));
-      }
+      // Si el historial está abierto, lo refresca para que el nuevo pago
+      // aparezca al momento.
+      void queryClient.invalidateQueries({
+        queryKey: ["payments", instance.id],
+      });
       showToast("Pago registrado correctamente");
-    } catch {
-      showToast("No se pudo registrar el pago", "error");
-    }
+    },
+    onError: () => showToast("No se pudo registrar el pago", "error"),
+  });
+  const recordPayment = (instance: Instance) => {
+    const note = (paymentNotes[instance.id] ?? "").trim();
+    recordPaymentMutation.mutate({ instance, note: note || undefined });
   };
 
-  const updateBilling = async (
-    instance: Instance,
-    patch: Partial<{ billingFrequency: BillingFrequency; billingDay: number }>,
-  ) => {
-    try {
-      const updated = await instancesApi.updateBilling(instance.id, patch);
+  const updateBillingMutation = useMutation({
+    mutationFn: ({
+      instance,
+      patch,
+    }: {
+      instance: Instance;
+      patch: Partial<{
+        billingFrequency: BillingFrequency;
+        billingDay: number;
+      }>;
+    }) => instancesApi.updateBilling(instance.id, patch),
+    onSuccess: (updated) => {
       setExistingInstances((prev) => ({
         ...prev,
         [updated.applicationId]: updated,
       }));
-    } catch {
-      showToast("No se pudo actualizar la configuración de cobro", "error");
-    }
+    },
+    onError: () =>
+      showToast("No se pudo actualizar la configuración de cobro", "error"),
+  });
+  const updateBilling = (
+    instance: Instance,
+    patch: Partial<{ billingFrequency: BillingFrequency; billingDay: number }>,
+  ) => {
+    updateBillingMutation.mutate({ instance, patch });
   };
 
-  const toggleHistory = async (instanceId: number) => {
+  const toggleHistory = (instanceId: number) => {
     setExpandedHistory((prev) => {
       const next = new Set(prev);
       if (next.has(instanceId)) next.delete(instanceId);
       else next.add(instanceId);
       return next;
     });
-
-    if (paymentHistory[instanceId] || loadingHistory.has(instanceId)) return;
-
-    setLoadingHistory((prev) => new Set(prev).add(instanceId));
-    try {
-      const history = await instancesApi.listPayments(instanceId);
-      setPaymentHistory((prev) => ({ ...prev, [instanceId]: history }));
-    } catch {
-      showToast("No se pudo cargar el historial de pagos", "error");
-    } finally {
-      setLoadingHistory((prev) => {
-        const next = new Set(prev);
-        next.delete(instanceId);
-        return next;
-      });
-    }
   };
 
-  const removePayment = async (instanceId: number, paymentId: number) => {
-    try {
-      await instancesApi.removePayment(paymentId);
-      setPaymentHistory((prev) => ({
-        ...prev,
-        [instanceId]: (prev[instanceId] ?? []).filter(
-          (p) => p.id !== paymentId,
-        ),
-      }));
+  const removePaymentMutation = useMutation({
+    mutationFn: ({ paymentId }: { instanceId: number; paymentId: number }) =>
+      instancesApi.removePayment(paymentId),
+    onSuccess: (_data, { instanceId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["payments", instanceId],
+      });
       showToast("Registro de pago eliminado");
-    } catch {
-      showToast("No se pudo eliminar el registro", "error");
-    }
+    },
+    onError: () => showToast("No se pudo eliminar el registro", "error"),
+  });
+  const removePayment = (instanceId: number, paymentId: number) => {
+    removePaymentMutation.mutate({ instanceId, paymentId });
   };
 
   // ─ Validation ─
@@ -687,30 +717,24 @@ export default function CustomerForm() {
   };
 
   // ─ Delete ─
-  const handleDelete = async () => {
-    if (!id) return;
-    setDeleting(true);
-    try {
-      await customersApi.remove(id);
+  const deleteMutation = useMutation({
+    mutationFn: () => customersApi.remove(id!),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["customers"] });
       goBack();
-    } catch (e: unknown) {
+    },
+    onError: (e: unknown) => {
       setError(getErrorMessage(e, "Error al eliminar"));
       setShowDeleteConfirm(false);
-    } finally {
-      setDeleting(false);
-    }
+    },
+  });
+  const handleDelete = () => {
+    if (id) deleteMutation.mutate();
   };
 
   // ─ Submit ─
-  const submit = async () => {
-    if (!validate()) {
-      setError("Corrige los errores del formulario antes de continuar.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-
-    try {
+  const submitMutation = useMutation({
+    mutationFn: async () => {
       const payload: Record<string, unknown> = {
         name: form.name.trim(),
         email: form.email.trim(),
@@ -807,9 +831,12 @@ export default function CustomerForm() {
 
       // Await strictly the creation + updates concurrently
       await Promise.all([...addPromises, ...updatePromises]);
-
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["customers"] });
       goBack();
-    } catch (e: unknown) {
+    },
+    onError: (e: unknown) => {
       const errorMsg = getErrorMessage(e, "");
 
       if (
@@ -822,9 +849,16 @@ export default function CustomerForm() {
       } else {
         setError(errorMsg || "Error al guardar el cliente.");
       }
-    } finally {
-      setSaving(false);
+    },
+  });
+
+  const submit = () => {
+    if (!validate()) {
+      setError("Corrige los errores del formulario antes de continuar.");
+      return;
     }
+    setError(null);
+    submitMutation.mutate();
   };
 
   // ─ Render ─
@@ -870,7 +904,7 @@ export default function CustomerForm() {
             </>
           }
           confirmLabel="Eliminar cliente"
-          loading={deleting}
+          loading={deleteMutation.isPending}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -961,19 +995,10 @@ export default function CustomerForm() {
                       </option>
                     ))}
                   </select>
-                  <svg
+                  <ChevronsUpDown
                     className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-                    />
-                  </svg>
+                    strokeWidth={2}
+                  />
                 </div>
               </Field>
 
@@ -1215,17 +1240,18 @@ export default function CustomerForm() {
           </div>
 
           {/* ── Section: Payment ── */}
-          {isEdit && Object.keys(existingInstances).length > 0 && (
+          {isEdit && instancesList.length > 0 && (
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
               <SectionTitle>Facturación</SectionTitle>
               <div className="space-y-4">
-                {Object.values(existingInstances).map((inst) => {
+                {instancesList.map((inst) => {
                   const payment = instancePayments[inst.id];
                   const justRecorded = payment?.justRecorded ?? false;
                   const status = getBillingStatus(inst);
                   const isExpanded = expandedHistory.has(inst.id);
-                  const isLoadingHistory = loadingHistory.has(inst.id);
-                  const history = paymentHistory[inst.id];
+                  const isLoadingHistory =
+                    paymentHistoryByInstance[inst.id]?.isLoading ?? false;
+                  const history = paymentHistoryByInstance[inst.id]?.data;
 
                   return (
                     <div
@@ -1336,7 +1362,12 @@ export default function CustomerForm() {
                         <button
                           type="button"
                           onClick={() => recordPayment(inst)}
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium border transition-all duration-300 shrink-0 ${
+                          disabled={
+                            recordPaymentMutation.isPending &&
+                            recordPaymentMutation.variables?.instance.id ===
+                              inst.id
+                          }
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium border transition-all duration-300 shrink-0 disabled:opacity-50 ${
                             justRecorded
                               ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
                               : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-teal-300 dark:hover:border-teal-500/50 hover:text-teal-800 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-500/10"
@@ -1457,20 +1488,11 @@ export default function CustomerForm() {
                           }`}
                         >
                           {isSelected && (
-                            <svg
+                            <Icon
+                              name="check"
                               className="w-2.5 h-2.5 text-white"
-                              viewBox="0 0 10 8"
-                              fill="currentColor"
-                            >
-                              <path
-                                d="M1 4l3 3 5-6"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                fill="none"
-                              />
-                            </svg>
+                              strokeWidth={1.5}
+                            />
                           )}
                         </div>
                         <span
@@ -1537,22 +1559,14 @@ export default function CustomerForm() {
           </div>
 
           {/* Error */}
-          {error && (
+          {(error ?? loadError) && (
             <div className="flex items-start gap-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-4 py-3">
-              <svg
+              <Icon
+                name="warningTriangle"
                 className="w-4 h-4 shrink-0 mt-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
                 strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                />
-              </svg>
-              {error}
+              />
+              {error ?? loadError}
             </div>
           )}
 
@@ -1583,11 +1597,13 @@ export default function CustomerForm() {
               <button
                 type="button"
                 onClick={submit}
-                disabled={saving}
+                disabled={submitMutation.isPending}
                 className="flex items-center gap-2 px-5 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                {saving && <Spinner className="w-3.5 h-3.5" />}
-                {saving
+                {submitMutation.isPending && (
+                  <Spinner className="w-3.5 h-3.5" />
+                )}
+                {submitMutation.isPending
                   ? "Guardando…"
                   : isEdit
                     ? "Guardar cambios"

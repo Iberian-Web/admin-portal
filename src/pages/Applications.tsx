@@ -1,13 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  applicationsApi,
-  servicesApi,
-  type Application,
-  type Service,
-} from "../api";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { UtensilsCrossed } from "lucide-react";
+import { applicationsApi, servicesApi, type Service } from "../api";
 import { Icon } from "../components/icons";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { Field, getInputClass } from "../components/FormControls";
+import { Field } from "../components/FormControls";
+import { getInputClass } from "../utils/inputClass";
 import { getErrorMessage } from "../utils/errors";
 import Modal from "../components/Modal";
 
@@ -15,21 +13,7 @@ import Modal from "../components/Modal";
 const ICONS: Record<string, { color: string; node: React.ReactNode }> = {
   restaurant: {
     color: "text-orange-700 dark:text-orange-400",
-    node: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 20.188a23.702 23.702 0 01-6 0M15 20.188V17.25m-6 2.938V17.25m0 0a23.702 23.702 0 006 0m-6 0a4.125 4.125 0 01-3.915-4.124V15m0 0V10.608M18 10.608V15a4.125 4.125 0 01-3 3.977"
-        />
-      </svg>
-    ),
+    node: <UtensilsCrossed className="w-5 h-5" strokeWidth={1.8} />,
   },
 };
 
@@ -46,26 +30,23 @@ function getIcon(key: string) {
 function PriceModal({
   service,
   onClose,
-  onSaved,
 }: {
   service: Service;
   onClose: () => void;
-  onSaved: (s: Service) => void;
 }) {
+  const queryClient = useQueryClient();
   const [price, setPrice] = useState(service.price ?? "");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      onSaved(await servicesApi.update(service.id, { price: price.trim() }));
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "Error desconocido"));
-      setSaving(false);
-    }
-  };
+  const mutation = useMutation({
+    mutationFn: () => servicesApi.update(service.id, { price: price.trim() }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["applications"] });
+      onClose();
+    },
+    onError: (e: unknown) => setError(getErrorMessage(e, "Error desconocido")),
+  });
+  const submit = () => mutation.mutate();
 
   return (
     <Modal onClose={onClose}>
@@ -100,10 +81,10 @@ function PriceModal({
         </button>
         <button
           onClick={submit}
-          disabled={saving}
+          disabled={mutation.isPending}
           className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {saving ? "Guardando…" : "Guardar"}
+          {mutation.isPending ? "Guardando…" : "Guardar"}
         </button>
       </div>
     </Modal>
@@ -115,38 +96,38 @@ function CreateServiceModal({
   appId,
   appName,
   onClose,
-  onCreated,
 }: {
   appId: number;
   appName: string;
   onClose: () => void;
-  onCreated: (s: Service) => void;
 }) {
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
+  const mutation = useMutation({
+    mutationFn: () =>
+      servicesApi.create(appId, {
+        name: name.trim(),
+        description: description.trim(),
+        price: price.trim(),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["applications"] });
+      onClose();
+    },
+    onError: (e: unknown) => setError(getErrorMessage(e, "Error desconocido")),
+  });
+
+  const submit = () => {
     if (!name.trim()) {
       setError("El nombre es obligatorio.");
       return;
     }
-    setSaving(true);
     setError(null);
-    try {
-      onCreated(
-        await servicesApi.create(appId, {
-          name: name.trim(),
-          description: description.trim(),
-          price: price.trim(),
-        }),
-      );
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "Error desconocido"));
-      setSaving(false);
-    }
+    mutation.mutate();
   };
 
   return (
@@ -200,10 +181,10 @@ function CreateServiceModal({
         </button>
         <button
           onClick={submit}
-          disabled={saving}
+          disabled={mutation.isPending}
           className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {saving ? "Creando…" : "Crear servicio"}
+          {mutation.isPending ? "Creando…" : "Crear servicio"}
         </button>
       </div>
     </Modal>
@@ -212,72 +193,39 @@ function CreateServiceModal({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Applications() {
-  const [apps, setApps] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: apps = [], isLoading: loading } = useQuery({
+    queryKey: ["applications"],
+    queryFn: () => applicationsApi.list(),
+  });
   const [activeCat, setActiveCat] = useState<number | null>(null);
   const [priceModal, setPriceModal] = useState<Service | null>(null);
   const [creatingService, setCreatingService] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<Service | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await applicationsApi.list();
-      setApps(data);
-      setActiveCat((prev) => prev ?? data[0]?.id ?? null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Selecciona la primera categoría en cuanto llegan las apps, sin pisar la
+  // selección si el usuario ya había elegido una. Va en el cuerpo del
+  // render (no en un efecto): es una adaptación de estado a partir de datos
+  // ya cargados, no una sincronización con un sistema externo.
+  if (apps.length > 0 && activeCat === null) {
+    setActiveCat(apps[0].id);
+  }
 
   const cat = apps.find((a) => a.id === activeCat) ?? null;
 
-  const handlePriceSaved = (saved: Service) => {
-    setApps((prev) =>
-      prev.map((a) =>
-        a.id !== activeCat
-          ? a
-          : {
-              ...a,
-              services: a.services.map((s) => (s.id === saved.id ? saved : s)),
-            },
-      ),
-    );
-    setPriceModal(null);
-  };
-
-  const handleServiceCreated = (created: Service) => {
-    setApps((prev) =>
-      prev.map((a) =>
-        a.id !== activeCat ? a : { ...a, services: [...a.services, created] },
-      ),
-    );
-    setCreatingService(false);
-  };
-
-  const handleDeleteService = async (svc: Service) => {
-    setDeletingId(svc.id);
-    setDeleteError(null);
-    try {
-      await servicesApi.remove(svc.id);
-      setApps((prev) =>
-        prev.map((a) =>
-          a.id !== activeCat
-            ? a
-            : { ...a, services: a.services.filter((s) => s.id !== svc.id) },
-        ),
-      );
+  const deleteMutation = useMutation({
+    mutationFn: (svc: Service) => servicesApi.remove(svc.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["applications"] });
       setDeleteConfirm(null);
-    } catch (e: unknown) {
-      setDeleteError(getErrorMessage(e, "Error al eliminar el servicio"));
-    } finally {
-      setDeletingId(null);
-    }
+    },
+    onError: (e: unknown) =>
+      setDeleteError(getErrorMessage(e, "Error al eliminar el servicio")),
+  });
+  const handleDeleteService = (svc: Service) => {
+    setDeleteError(null);
+    deleteMutation.mutate(svc);
   };
 
   if (loading) {
@@ -404,7 +352,10 @@ export default function Applications() {
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(svc)}
-                              disabled={deletingId === svc.id}
+                              disabled={
+                                deleteMutation.isPending &&
+                                deleteMutation.variables?.id === svc.id
+                              }
                               className="p-1.5 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-50"
                               title="Eliminar servicio"
                             >
@@ -422,11 +373,7 @@ export default function Applications() {
       )}
 
       {priceModal && (
-        <PriceModal
-          service={priceModal}
-          onClose={() => setPriceModal(null)}
-          onSaved={handlePriceSaved}
-        />
+        <PriceModal service={priceModal} onClose={() => setPriceModal(null)} />
       )}
 
       {creatingService && cat && (
@@ -434,7 +381,6 @@ export default function Applications() {
           appId={cat.id}
           appName={cat.name}
           onClose={() => setCreatingService(false)}
-          onCreated={handleServiceCreated}
         />
       )}
 
@@ -456,7 +402,10 @@ export default function Applications() {
             </>
           }
           confirmLabel="Eliminar"
-          loading={deletingId === deleteConfirm.id}
+          loading={
+            deleteMutation.isPending &&
+            deleteMutation.variables?.id === deleteConfirm.id
+          }
           onConfirm={() => handleDeleteService(deleteConfirm)}
           onCancel={() => {
             setDeleteConfirm(null);

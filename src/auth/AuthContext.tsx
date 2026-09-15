@@ -1,41 +1,45 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthContext, type AuthStatus } from "./authTypes";
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
+
+// Cualquier fallo (sesión caducada, red, etc.) se trata igual: no
+// autenticado — nunca se propaga como error de la query.
+async function checkSession(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+const AUTH_QUERY_KEY = ["auth", "session"];
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [status, setStatus] = useState<AuthStatus>("loading");
+  const queryClient = useQueryClient();
 
-  // Prevent double-fetching in StrictMode
-  const initDone = useRef(false);
+  // La sesión solo cambia por un login/logout explícito (ver más abajo), no
+  // por un refetch en segundo plano — de ahí el staleTime infinito. Al ser
+  // una query, React Query ya deduplica la petición inicial en StrictMode
+  // sin necesitar el useRef "initDone" que hacía falta antes.
+  const { data: authenticated = false, isLoading } = useQuery({
+    queryKey: AUTH_QUERY_KEY,
+    queryFn: checkSession,
+    retry: false,
+    staleTime: Infinity,
+  });
 
-  // ── Helpers ──
-
-  const clearAuth = useCallback(() => {
-    setStatus("unauthenticated");
-  }, []);
-
-  // ── Bootstrap: restore session from cookie (the browser sends it automatically) ──
-
-  useEffect(() => {
-    if (initDone.current) return;
-    initDone.current = true;
-
-    fetch(`${BASE}/api/auth/me`, { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Session expired");
-        setStatus("authenticated");
-      })
-      .catch(() => {
-        clearAuth();
-      });
-  }, [clearAuth]);
-
-  // ── Actions ──
+  const status: AuthStatus = isLoading
+    ? "loading"
+    : authenticated
+      ? "authenticated"
+      : "unauthenticated";
 
   const login = useCallback(
     async (username: string, password: string): Promise<void> => {
@@ -51,9 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error((body as { error?: string }).error ?? "Login failed");
       }
 
-      setStatus("authenticated");
+      queryClient.setQueryData(AUTH_QUERY_KEY, true);
     },
-    [],
+    [queryClient],
   );
 
   const logout = useCallback(async (): Promise<void> => {
@@ -65,18 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch {
       // Best-effort — always clear local state
     } finally {
-      clearAuth();
+      queryClient.setQueryData(AUTH_QUERY_KEY, false);
     }
-  }, [clearAuth]);
-
-  // ── Value ──
+  }, [queryClient]);
 
   return (
     <AuthContext.Provider
       value={{
         status,
-        isLoading: status === "loading",
-        isAuthenticated: status === "authenticated",
+        isLoading,
+        isAuthenticated: authenticated,
         login,
         logout,
       }}

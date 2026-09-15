@@ -1,6 +1,7 @@
 // admin-portal/src/components/Sidebar.tsx
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import ThemeToggle from "./ThemeToggle";
 import { Icon } from "./icons";
@@ -96,19 +97,7 @@ function SidebarContent({
           title={collapsed ? "Cerrar sesión" : undefined}
           className={`w-full px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
         >
-          <svg
-            className="w-4 h-4 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.8}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
-            />
-          </svg>
+          <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.8} />
           {!collapsed && "Cerrar sesión"}
         </button>
       </div>

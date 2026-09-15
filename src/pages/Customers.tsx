@@ -1,6 +1,8 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { customersApi, type Customer, type CustomerStatus } from "../api";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { customersApi, type CustomerStatus } from "../api";
 import { Icon } from "../components/icons";
 import { statusLabel } from "../utils/customerStatus";
 
@@ -25,22 +27,16 @@ const statusStyles: Record<CustomerStatus, string> = {
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return (
     <span
-      className={`ml-1 inline-flex flex-col gap-px ${active ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
+      className={`ml-1 inline-flex flex-col -space-y-1 ${active ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
     >
-      <svg
-        className={`w-2.5 h-2.5 ${active && dir === "asc" ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
-        viewBox="0 0 10 6"
-        fill="currentColor"
-      >
-        <path d="M5 0L10 6H0L5 0Z" />
-      </svg>
-      <svg
-        className={`w-2.5 h-2.5 ${active && dir === "desc" ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
-        viewBox="0 0 10 6"
-        fill="currentColor"
-      >
-        <path d="M5 6L0 0H10L5 6Z" />
-      </svg>
+      <ChevronUp
+        className={`w-3 h-3 ${active && dir === "asc" ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
+        strokeWidth={3}
+      />
+      <ChevronDown
+        className={`w-3 h-3 ${active && dir === "desc" ? "text-teal-700 dark:text-teal-400" : "text-zinc-600"}`}
+        strokeWidth={3}
+      />
     </span>
   );
 }
@@ -60,24 +56,13 @@ const columns: ColDef[] = [
 export default function Customers() {
   const navigate = useNavigate();
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: customers = [], isLoading: loading } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => customersApi.list(),
+  });
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-  const load = useCallback(async () => {
-    try {
-      const data = await customersApi.list();
-      setCustomers(data);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
