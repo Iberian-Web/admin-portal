@@ -5,6 +5,7 @@ import MainLayout from "./layouts/MainLayout";
 import Customers from "./pages/Customers";
 import CustomerForm from "./pages/CustomerForm";
 import Applications from "./pages/Applications";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./auth/useAuth";
@@ -44,6 +45,7 @@ function AppRoutes() {
           <Route path="customers/new" element={<CustomerForm />} />
           <Route path="customers/:id" element={<CustomerForm />} />
           <Route path="applications" element={<Applications />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         {/* Catch All */}

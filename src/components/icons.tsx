@@ -18,6 +18,16 @@ import {
   LayoutGrid,
   RefreshCw,
   Loader2,
+  FileText,
+  Download,
+  Upload,
+  Mail,
+  Wrench,
+  Globe,
+  Receipt,
+  UserPlus,
+  Settings,
+  Database,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +47,16 @@ const ICONS = {
   users: Users,
   grid: LayoutGrid,
   refresh: RefreshCw,
+  fileText: FileText,
+  download: Download,
+  upload: Upload,
+  mail: Mail,
+  wrench: Wrench,
+  globe: Globe,
+  receipt: Receipt,
+  userPlus: UserPlus,
+  settings: Settings,
+  database: Database,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

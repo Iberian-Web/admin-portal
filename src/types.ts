@@ -9,6 +9,23 @@ export type Credential = {
   role: string;
 };
 
+// ─── Documents (contracts) ────────────────────────────────────────────────
+
+export type DocumentType =
+  "CONTRACT" | "WEB_SCOPE" | "MAINTENANCE_PLAN" | "QUOTE" | "RENEWAL";
+export type DocumentStatus = "ACTIVE" | "SUPERSEDED";
+
+export type CustomerDocument = {
+  id: number;
+  type: DocumentType;
+  status: DocumentStatus;
+  fileName: string;
+  setupFee: string;
+  maintenanceFee: string;
+  notes: string;
+  createdAt: string;
+};
+
 export type CredentialServicePermission = {
   serviceId: number;
   name: string;
@@ -29,6 +46,7 @@ export type User = {
   createdAt: string;
   updatedAt: string;
   credentials?: Credential[];
+  documents?: CustomerDocument[];
   instances: Instance[];
 };
 

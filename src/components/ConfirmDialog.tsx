@@ -11,6 +11,7 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  loadingLabel,
   loading,
   onConfirm,
   onCancel,
@@ -18,6 +19,7 @@ export default function ConfirmDialog({
   title: string;
   message: ReactNode;
   confirmLabel: string;
+  loadingLabel?: string;
   loading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -42,7 +44,7 @@ export default function ConfirmDialog({
           className="px-4 py-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 text-sm font-medium rounded-lg border border-red-200 dark:border-red-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
         >
           {loading && <Spinner className="w-3.5 h-3.5" />}
-          {loading ? "Eliminando…" : confirmLabel}
+          {loading ? (loadingLabel ?? "Eliminando…") : confirmLabel}
         </button>
       </div>
     </Modal>

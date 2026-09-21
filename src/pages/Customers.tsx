@@ -13,13 +13,10 @@ type SortDir = "asc" | "desc";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const statusStyles: Record<CustomerStatus, string> = {
-  ACTIVE:
-    "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-500/20",
-  INACTIVE:
-    "bg-zinc-200 dark:bg-zinc-700/40 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-300 dark:ring-zinc-600/30",
-  PENDING:
-    "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-1 ring-amber-200 dark:ring-amber-500/20",
+const dotStyles: Record<CustomerStatus, string> = {
+  ACTIVE: "bg-emerald-500 dark:bg-emerald-400",
+  PENDING: "bg-amber-500 dark:bg-amber-400",
+  INACTIVE: "bg-zinc-400 dark:bg-zinc-500",
 };
 
 // ─── Sort icon ────────────────────────────────────────────────────────────────
@@ -48,7 +45,6 @@ const columns: ColDef[] = [
   { key: "name", label: "Nombre" },
   { key: "email", label: "Email" },
   { key: "company", label: "Empresa" },
-  { key: "status", label: "Estado" },
 ];
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -99,80 +95,92 @@ export default function Customers() {
   return (
     <div className="px-6 lg:px-8 py-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             Clientes
           </h1>
-          <p className="text-sm text-zinc-500 mt-0.5">
+          <p className="text-sm text-zinc-500 mt-1">
             {customers.length} clientes registrados
           </p>
         </div>
         <button
           onClick={() => navigate("/customers/new")}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
+          className="flex items-center gap-2 px-5 py-3 bg-teal-600 hover:bg-teal-500 text-white text-base font-bold rounded-xl transition-colors"
         >
-          <Icon name="plus" className="w-4 h-4" />
-          Nuevo cliente
+          <Icon name="plus" className="w-5 h-5" />
+          Cliente
         </button>
       </div>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[
-          {
-            label: "Activos",
-            value: customers.filter((c) => c.status === "ACTIVE").length,
-            color: "text-emerald-700 dark:text-emerald-400",
-          },
-          {
-            label: "Pendientes",
-            value: customers.filter((c) => c.status === "PENDING").length,
-            color: "text-amber-700 dark:text-amber-400",
-          },
-          {
-            label: "Inactivos",
-            value: customers.filter((c) => c.status === "INACTIVE").length,
-            color: "text-zinc-600 dark:text-zinc-400",
-          },
-        ].map(({ label, value, color }) => (
-          <div
-            key={label}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4"
-          >
-            <p className="text-xs font-medium text-zinc-500 mb-1">{label}</p>
-            <p className={`text-2xl font-semibold ${color}`}>{value}</p>
-          </div>
-        ))}
-      </div>
+      {/* Búsqueda + stats: en la misma fila en escritorio para ahorrar
+          espacio vertical; en móvil, la búsqueda arriba y las stats debajo
+          en una rejilla (en vez de una fila que se envuelve de forma
+          irregular según el ancho disponible). */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
+        <div className="relative flex-1">
+          <Icon
+            name="search"
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500"
+          />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, email, empresa, DNI o dominio..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-base text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-colors"
+          />
+        </div>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Icon
-          name="search"
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
-        />
-        <input
-          type="text"
-          placeholder="Buscar por nombre, email, empresa, DNI o dominio..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 transition-colors"
-        />
+        <div className="grid grid-cols-3 lg:flex lg:items-center gap-2 lg:gap-x-6 lg:shrink-0 lg:px-5 lg:py-3.5 lg:bg-white lg:dark:bg-zinc-900 lg:border lg:border-zinc-200 lg:dark:border-zinc-800 lg:rounded-xl">
+          {[
+            {
+              label: "Activos",
+              value: customers.filter((c) => c.status === "ACTIVE").length,
+              color: "text-emerald-700 dark:text-emerald-400",
+            },
+            {
+              label: "Pendientes",
+              value: customers.filter((c) => c.status === "PENDING").length,
+              color: "text-amber-700 dark:text-amber-400",
+            },
+            {
+              label: "Inactivos",
+              value: customers.filter((c) => c.status === "INACTIVE").length,
+              color: "text-zinc-600 dark:text-zinc-400",
+            },
+          ].map(({ label, value, color }, i) => (
+            <div
+              key={label}
+              className={`flex flex-col lg:flex-row items-center lg:items-center gap-0.5 lg:gap-2 bg-white dark:bg-zinc-900 lg:bg-transparent border border-zinc-200 dark:border-zinc-800 lg:border-0 rounded-xl lg:rounded-none px-3 py-2.5 lg:px-0 lg:py-0 ${i > 0 ? "lg:border-l lg:border-zinc-200 lg:dark:border-zinc-800 lg:pl-6" : ""}`}
+            >
+              <span
+                className={`text-lg lg:text-xl font-bold tabular-nums ${color}`}
+              >
+                {loading ? (
+                  <span className="w-8 h-5 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse inline-block" />
+                ) : (
+                  value
+                )}
+              </span>
+              <span className="text-[11px] lg:text-xs text-zinc-500 text-center lg:text-left leading-tight">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-        {/* 👇 Contenedor añadido para habilitar el scroll horizontal */}
-        <div className="overflow-x-auto">
-          {/* 👇 Añadimos min-w-[800px] para asegurar que mantenga un tamaño legible en móvil */}
-          <table className="w-full text-sm table-fixed min-w-200">
+        <div>
+          <table className="w-full text-base table-fixed">
             <colgroup>
-              <col className="w-[24%]" />
-              <col className="w-[24%]" />
-              <col className="w-[20%]" />
-              <col className="w-[13%]" />
-              <col className="w-[19%]" />
+              <col className="w-[26%]" />
+              <col className="w-[26%]" />
+              <col className="w-[22%]" />
+              <col className="w-[22%]" />
+              <col className="w-[4%]" />
             </colgroup>
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-800 text-left">
@@ -180,7 +188,7 @@ export default function Customers() {
                   <th
                     key={col.key}
                     onClick={() => handleSort(col.key)}
-                    className="px-5 py-3.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                    className="px-5 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
                   >
                     <span className="inline-flex items-center gap-0.5">
                       {col.label}
@@ -210,15 +218,15 @@ export default function Customers() {
                     onClick={() => navigate(`/customers/${c.id}`)}
                     className="hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-4">
                       <span
-                        className="block font-medium text-zinc-800 dark:text-zinc-200 truncate"
+                        className="block font-semibold text-base text-zinc-800 dark:text-zinc-200 truncate"
                         title={c.name}
                       >
                         {c.name}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-4">
                       <span
                         className="block text-zinc-600 dark:text-zinc-400 truncate"
                         title={c.email}
@@ -226,7 +234,7 @@ export default function Customers() {
                         {c.email}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-4">
                       <span
                         className="block text-zinc-600 dark:text-zinc-400 truncate"
                         title={c.company || undefined}
@@ -234,14 +242,7 @@ export default function Customers() {
                         {c.company || "—"}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${statusStyles[c.status]}`}
-                      >
-                        {statusLabel[c.status]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-4">
                       {c.domains.length > 0 ? (
                         <div className="flex items-center gap-1 min-w-0">
                           <span
@@ -262,6 +263,12 @@ export default function Customers() {
                       ) : (
                         <span className="text-zinc-600 text-xs">—</span>
                       )}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <span
+                        className={`inline-block w-2.5 h-2.5 rounded-full ${dotStyles[c.status]}`}
+                        title={statusLabel[c.status]}
+                      />
                     </td>
                   </tr>
                 ))

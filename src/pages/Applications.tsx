@@ -50,10 +50,10 @@ function PriceModal({
 
   return (
     <Modal onClose={onClose}>
-      <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+      <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-1">
         Editar precio
       </h3>
-      <p className="text-xs text-zinc-500 mb-5">{service.name}</p>
+      <p className="text-sm text-zinc-500 mb-5">{service.name}</p>
 
       <Field label="Precio">
         <input
@@ -67,7 +67,7 @@ function PriceModal({
       </Field>
 
       {error && (
-        <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+        <p className="mt-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-xl px-3.5 py-2.5">
           {error}
         </p>
       )}
@@ -75,14 +75,14 @@ function PriceModal({
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+          className="px-4 py-2.5 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={submit}
           disabled={mutation.isPending}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
         >
           {mutation.isPending ? "Guardando…" : "Guardar"}
         </button>
@@ -132,10 +132,10 @@ function CreateServiceModal({
 
   return (
     <Modal onClose={onClose}>
-      <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+      <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-1">
         Nuevo servicio
       </h3>
-      <p className="text-xs text-zinc-500 mb-5">en {appName}</p>
+      <p className="text-sm text-zinc-500 mb-5">en {appName}</p>
 
       <div className="space-y-3">
         <Field label="Nombre" required>
@@ -167,7 +167,7 @@ function CreateServiceModal({
       </div>
 
       {error && (
-        <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+        <p className="mt-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-xl px-3.5 py-2.5">
           {error}
         </p>
       )}
@@ -175,14 +175,14 @@ function CreateServiceModal({
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+          className="px-4 py-2.5 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={submit}
           disabled={mutation.isPending}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
         >
           {mutation.isPending ? "Creando…" : "Crear servicio"}
         </button>
@@ -231,25 +231,25 @@ export default function Applications() {
   if (loading) {
     return (
       <div className="px-6 lg:px-8 py-6 w-full">
-        <p className="text-sm text-zinc-500">Cargando aplicaciones…</p>
+        <p className="text-base text-zinc-500">Cargando aplicaciones…</p>
       </div>
     );
   }
 
   return (
     <div className="px-6 lg:px-8 py-6 w-full">
-      <div className="mb-8">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           Aplicaciones
         </h1>
-        <p className="text-sm text-zinc-500 mt-0.5">
+        <p className="text-sm text-zinc-500 mt-1">
           Ajusta los precios de catálogo de cada servicio
         </p>
       </div>
 
       {apps.length === 0 ? (
         <div className="flex items-center justify-center py-32 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-          <p className="text-zinc-500 text-sm">
+          <p className="text-zinc-500 text-base">
             No hay aplicaciones configuradas
           </p>
         </div>
@@ -259,7 +259,7 @@ export default function Applications() {
           {/* App list (Categories) */}
           {/* 👇 w-full en móvil, md:w-48 en escritorio */}
           <div className="w-full md:w-48 shrink-0">
-            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest px-1 mb-2">
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest px-1 mb-3">
               Categorías
             </p>
             {/* 👇 flex-row con scroll horizontal en móvil, flex-col clásico en escritorio */}
@@ -272,7 +272,7 @@ export default function Applications() {
                     key={a.id}
                     onClick={() => setActiveCat(a.id)}
                     // 👇 Añadimos whitespace-nowrap y shrink-0 para que las pestañas no colapsen en el scroll móvil
-                    className={`flex items-center gap-3 px-3 py-2 md:py-2.5 rounded-lg text-sm font-medium text-left transition-colors whitespace-nowrap md:whitespace-normal shrink-0 md:w-full ${
+                    className={`flex items-center gap-3 px-4 py-2.5 md:py-3 rounded-xl text-base font-semibold text-left transition-colors whitespace-nowrap md:whitespace-normal shrink-0 md:w-full ${
                       active
                         ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
@@ -284,7 +284,7 @@ export default function Applications() {
                     <span className="flex-1 truncate max-w-35 md:max-w-none">
                       {a.name}
                     </span>
-                    <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-100 dark:bg-zinc-800/80 px-1.5 py-0.5 rounded">
+                    <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md">
                       {a.services.length}
                     </span>
                   </button>
@@ -302,26 +302,26 @@ export default function Applications() {
                   <div className="flex items-center gap-3 mb-6">
                     <span className={icon.color}>{icon.node}</span>
                     <div className="flex-1 min-w-0">
-                      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                      <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                         {cat.name}
                       </h2>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-sm text-zinc-500">
                         {cat.services.length} servicio
                         {cat.services.length !== 1 ? "s" : ""}
                       </p>
                     </div>
                     <button
                       onClick={() => setCreatingService(true)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
+                      className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-xl transition-colors shrink-0"
                     >
-                      <Icon name="plus" className="w-3.5 h-3.5" />
+                      <Icon name="plus" className="w-4 h-4" />
                       Añadir servicio
                     </button>
                   </div>
 
                   {cat.services.length === 0 ? (
                     <div className="flex items-center justify-center py-20 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                      <p className="text-zinc-500 text-sm">
+                      <p className="text-zinc-500 text-base">
                         Sin servicios en esta aplicación
                       </p>
                     </div>
@@ -330,25 +330,25 @@ export default function Applications() {
                       {cat.services.map((svc) => (
                         <div
                           key={svc.id}
-                          // 👇 Ajustamos los paddings internos para pantallas pequeñas (px-4 py-3 vs px-5 py-4)
+                          // 👇 Ajustamos los paddings internos para pantallas pequeñas (px-4 py-3.5 vs px-5 py-4)
                           className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl"
                         >
                           {/* 👇 break-words previene desbordamientos raros si hay nombres larguísimos */}
-                          <p className="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-200 wrap-break-word">
+                          <p className="flex-1 text-base font-semibold text-zinc-800 dark:text-zinc-200 wrap-break-word">
                             {svc.name}
                           </p>
 
                           {/* 👇 Envolvemos el precio y botón en un contenedor shrink-0 para blindar su tamaño en móvil */}
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-md min-w-12.5 text-center">
+                            <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg min-w-15 text-center">
                               {svc.price || "—"}
                             </span>
                             <button
                               onClick={() => setPriceModal(svc)}
-                              className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                              className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
                               title="Editar precio"
                             >
-                              <Icon name="pencil" className="w-3.5 h-3.5" />
+                              <Icon name="pencil" className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(svc)}
@@ -356,10 +356,10 @@ export default function Applications() {
                                 deleteMutation.isPending &&
                                 deleteMutation.variables?.id === svc.id
                               }
-                              className="p-1.5 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-50"
-                              title="Eliminar servicio"
+                              className="p-2 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                              title="Eliminar"
                             >
-                              <Icon name="trash" className="w-3.5 h-3.5" />
+                              <Icon name="trash" className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -395,7 +395,7 @@ export default function Applications() {
               </span>
               . Esta acción no se puede deshacer.
               {deleteError && (
-                <p className="mt-2 text-xs text-red-700 dark:text-red-400">
+                <p className="mt-2 text-sm text-red-700 dark:text-red-400">
                   {deleteError}
                 </p>
               )}

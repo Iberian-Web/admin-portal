@@ -12,14 +12,18 @@ import {
   applicationsApi,
   instancesApi,
   credentialsApi,
+  documentsApi,
+  documentFileUrl,
   type Customer,
   type Credential,
   type CredentialServicePermission,
   type CustomerStatus,
   type Instance,
   type BillingFrequency,
+  type CustomerDocument,
+  type DocumentType,
 } from "../api";
-import { Icon, Spinner } from "../components/icons";
+import { Icon, Spinner, type IconName } from "../components/icons";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import Toast, { type ToastVariant } from "../components/Toast";
@@ -163,6 +167,99 @@ function getBillingStatus(instance: Instance): BillingStatus {
       "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400",
     nextDueDate,
   };
+}
+
+// ─── Document (contract) helpers ───────────────────────────────────────────
+
+const documentStatusLabel: Record<CustomerDocument["status"], string> = {
+  ACTIVE: "Vigente",
+  SUPERSEDED: "Sustituido",
+};
+
+const documentStatusStyles: Record<CustomerDocument["status"], string> = {
+  ACTIVE:
+    "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-500/20",
+  SUPERSEDED:
+    "bg-zinc-200 dark:bg-zinc-700/40 text-zinc-600 dark:text-zinc-400 ring-1 ring-zinc-300 dark:ring-zinc-600/30",
+};
+
+/** Metadatos de cada tipo de documento que se puede generar para un cliente. */
+const documentTypeMeta: Record<
+  DocumentType,
+  { label: string; shortLabel: string; icon: IconName; helpText: string }
+> = {
+  CONTRACT: {
+    label: "Contrato de servicios",
+    shortLabel: "Contrato",
+    icon: "fileText",
+    helpText:
+      "Documento legal y vinculante con las cláusulas del servicio y el Anexo I de precios.",
+  },
+  WEB_SCOPE: {
+    label: "Ficha de alcance web",
+    shortLabel: "Alcance web",
+    icon: "globe",
+    helpText:
+      "Descripción detallada de qué incluye la web: funcionalidades, servicios, elementos técnicos y mantenimiento.",
+  },
+  MAINTENANCE_PLAN: {
+    label: "Ficha de mantenimiento",
+    shortLabel: "Mantenimiento",
+    icon: "wrench",
+    helpText:
+      "Detalla qué cubre y qué no el mantenimiento recurrente, tiempos de respuesta y cuota.",
+  },
+  QUOTE: {
+    label: "Presupuesto",
+    shortLabel: "Presupuesto",
+    icon: "receipt",
+    helpText:
+      "Desglose de precios (alta, servicios y mantenimiento) para enviar antes de firmar el contrato.",
+  },
+  RENEWAL: {
+    label: "Renovación de contrato",
+    shortLabel: "Renovación",
+    icon: "refresh",
+    helpText:
+      "Addendum que prorroga el contrato ya firmado para un nuevo periodo, actualizando la cuota si procede. Requiere que exista un contrato previo.",
+  },
+};
+
+const documentTypeOrder: DocumentType[] = [
+  "CONTRACT",
+  "WEB_SCOPE",
+  "MAINTENANCE_PLAN",
+  "QUOTE",
+  "RENEWAL",
+];
+
+/** Documentos que se generan juntos al usar el atajo "Dar de alta". */
+const onboardingBundleTypes: DocumentType[] = [
+  "CONTRACT",
+  "WEB_SCOPE",
+  "MAINTENANCE_PLAN",
+];
+
+/** Asunto + cuerpo del correo de aceptación de términos, listos para un enlace mailto:. */
+function buildContractEmail(customer: Customer, doc: CustomerDocument) {
+  const { label } = documentTypeMeta[doc.type];
+  const subject = `${label} – ${customer.company || customer.name}`;
+  const isContract = doc.type === "CONTRACT";
+  const body = [
+    `Hola ${customer.name},`,
+    "",
+    `Aquí tienes el documento "${label}" (${doc.fileName}) de tu cuenta. Lo encontrarás adjunto a este correo.`,
+    "",
+    isContract
+      ? "Si todo te parece correcto, con responder confirmando la recepción de este correo damos por aceptados los términos y condiciones del contrato."
+      : "Échale un vistazo con calma y, si te surge cualquier pregunta, escríbenos: te ayudamos encantados.",
+    "",
+    "¡Gracias por confiar en nosotros!",
+    "",
+    "Un saludo,",
+    "Iberian Web",
+  ].join("\n");
+  return { subject, body };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -343,9 +440,22 @@ export default function CustomerForm() {
   const [credentialErrors, setCredentialErrors] = useState<
     Record<string, string>
   >({});
+  const [credentialToRemove, setCredentialToRemove] = useState<{
+    index: number;
+    credential: CredentialForm;
+  } | null>(null);
   const [permissionsFor, setPermissionsFor] = useState<CredentialForm | null>(
     null,
   );
+
+  // ── Documentation (contracts) state ──
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docMode, setDocMode] = useState<"single" | "onboarding">("single");
+  const [docType, setDocType] = useState<DocumentType>("CONTRACT");
+  const [docSetupFee, setDocSetupFee] = useState("");
+  const [docMaintenanceFee, setDocMaintenanceFee] = useState("");
+  const [docNotes, setDocNotes] = useState("");
+  const [docToDelete, setDocToDelete] = useState<CustomerDocument | null>(null);
 
   // Per-instance payment tracking: instanceId → { lastPaymentDate, justRecorded }
   const [instancePayments, setInstancePayments] = useState<
@@ -564,8 +674,12 @@ export default function CustomerForm() {
         if (!appServices[appId]) {
           const app = applications.find((a) => a.id === appId);
           if (app) {
+            // Al añadir una aplicación no se activa ningún servicio por
+            // defecto (igual que hace el backend al crear la instancia):
+            // si no se marca explícitamente ningún servicio, el cliente
+            // se queda solo con la web, sin servicios de la aplicación.
             const svcMap: ServiceState = {};
-            for (const svc of app.services) svcMap[svc.id] = true;
+            for (const svc of app.services) svcMap[svc.id] = false;
             setAppServices((prev2) => ({ ...prev2, [appId]: svcMap }));
           }
         }
@@ -684,6 +798,75 @@ export default function CustomerForm() {
     removePaymentMutation.mutate({ instanceId, paymentId });
   };
 
+  // ── Documentation (contracts) ──
+  const documentsQueryKey = ["documents", id];
+  const { data: documents = [], isLoading: documentsLoading } = useQuery({
+    queryKey: documentsQueryKey,
+    queryFn: () => documentsApi.list(id!),
+    enabled: isEdit,
+  });
+
+  const generateDocMutation = useMutation({
+    mutationFn: () =>
+      documentsApi.generate(id!, {
+        type: docType,
+        setupFee: docSetupFee.trim() || undefined,
+        maintenanceFee: docMaintenanceFee.trim() || undefined,
+        notes: docNotes.trim() || undefined,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: documentsQueryKey });
+      setShowDocModal(false);
+      setDocType("CONTRACT");
+      setDocSetupFee("");
+      setDocMaintenanceFee("");
+      setDocNotes("");
+      showToast("Documento generado correctamente");
+    },
+    onError: (e: unknown) =>
+      showToast(getErrorMessage(e, "No se pudo generar el documento"), "error"),
+  });
+
+  const generateOnboardingMutation = useMutation({
+    mutationFn: () =>
+      documentsApi.generateOnboardingBundle(id!, {
+        setupFee: docSetupFee.trim() || undefined,
+        maintenanceFee: docMaintenanceFee.trim() || undefined,
+        notes: docNotes.trim() || undefined,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: documentsQueryKey });
+      setShowDocModal(false);
+      setDocSetupFee("");
+      setDocMaintenanceFee("");
+      setDocNotes("");
+      showToast("Documentos de alta generados correctamente");
+    },
+    onError: (e: unknown) =>
+      showToast(
+        getErrorMessage(e, "No se pudieron generar los documentos de alta"),
+        "error",
+      ),
+  });
+
+  const removeDocMutation = useMutation({
+    mutationFn: (documentId: number) => documentsApi.remove(documentId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: documentsQueryKey });
+      setDocToDelete(null);
+      showToast("Documento eliminado");
+    },
+    onError: () => showToast("No se pudo eliminar el documento", "error"),
+  });
+
+  const openContractEmail = (doc: CustomerDocument) => {
+    if (!customer) return;
+    const { subject, body } = buildContractEmail(customer, doc);
+    // Construye la URL directa para redactar en Gmail web
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customer.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank");
+  };
+
   // ─ Validation ─
   const validate = (): boolean => {
     const errors: FormErrors = {};
@@ -748,12 +931,14 @@ export default function CustomerForm() {
         phone: form.phone.trim(),
         address: form.address.trim(),
         credentials: credentials.map(
-          ({ id, name, username, role, password, isNewPasswordGenerated }) => ({
+          ({ id, name, username, role, password }) => ({
             id,
             name: name.trim(),
             username: username.trim(),
             role: role.trim(),
-            ...(isNewPasswordGenerated && password ? { password } : {}),
+            // El backend es quien decide si esta credencial es nueva (y por
+            // tanto si exige contraseña) — aquí solo se manda si hay una.
+            ...(password.trim() ? { password: password.trim() } : {}),
           }),
         ),
       };
@@ -864,7 +1049,7 @@ export default function CustomerForm() {
   // ─ Render ─
   if (loading) {
     return (
-      <div className="px-4 sm:px-8 py-8 max-w-3xl mx-auto w-full animate-pulse space-y-8">
+      <div className="px-6 lg:px-8 py-6 w-full animate-pulse space-y-8 max-w-2xl mx-auto">
         <div className="flex gap-4 mb-8">
           <div className="w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-lg shrink-0" />
           <div className="space-y-2 mt-1">
@@ -903,712 +1088,874 @@ export default function CustomerForm() {
               <p className="mt-1">Esta acción no se puede deshacer.</p>
             </>
           }
-          confirmLabel="Eliminar cliente"
+          confirmLabel="Eliminar"
           loading={deleteMutation.isPending}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
 
-      <div className="px-4 sm:px-8 py-8 max-w-3xl mx-auto w-full">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
-            onClick={goBack}
-            className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-            title="Volver"
-          >
-            <Icon name="arrowLeft" className="w-4 h-4" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-              {isEdit ? (customer?.name ?? "Editar cliente") : "Nuevo cliente"}
-            </h1>
-            <p className="text-sm text-zinc-500 mt-0.5">
-              {isEdit
-                ? "Edita los datos y aplicaciones del cliente"
-                : "Rellena los datos para crear un cliente"}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          {/* ── Section: Info ── */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-            <SectionTitle>Información del cliente</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field
-                label="Nombre"
-                required
-                hint={!isEdit ? "(se usa para generar el usuario)" : undefined}
-                error={fieldErrors.name}
-                className="col-span-full"
-              >
-                <input
-                  className={getInputClass(fieldErrors.name)}
-                  placeholder="Ana García López"
-                  value={form.name}
-                  onChange={(e) => setField("name", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Email" required error={fieldErrors.email}>
-                <input
-                  type="email"
-                  className={getInputClass(fieldErrors.email)}
-                  placeholder="ana@empresa.com"
-                  value={form.email}
-                  onChange={(e) => setField("email", e.target.value)}
-                />
-              </Field>
-
-              <Field label="DNI / NIF" required error={fieldErrors.dni}>
-                <input
-                  className={getInputClass(fieldErrors.dni)}
-                  placeholder="12345678A"
-                  value={form.dni}
-                  onChange={(e) => setField("dni", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Empresa">
-                <input
-                  className={getInputClass()}
-                  placeholder="TechTide Solutions"
-                  value={form.company}
-                  onChange={(e) => setField("company", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Estado">
-                <div className="relative">
-                  <select
-                    className={`${getInputClass()} appearance-none pr-10`}
-                    value={form.status}
-                    onChange={(e) =>
-                      setField("status", e.target.value as CustomerStatus)
-                    }
-                  >
-                    {(Object.keys(statusLabel) as CustomerStatus[]).map((s) => (
-                      <option key={s} value={s}>
-                        {statusLabel[s]}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronsUpDown
-                    className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                    strokeWidth={2}
-                  />
-                </div>
-              </Field>
-
-              <Field
-                label="Dominios"
-                hint="(separados por coma)"
-                className="col-span-full"
-              >
-                <input
-                  className={getInputClass()}
-                  placeholder="miempresa.com, tienda.miempresa.es"
-                  value={form.domains}
-                  onChange={(e) => setField("domains", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Teléfono" className="col-span-full sm:col-span-1">
-                <input
-                  type="tel"
-                  className={getInputClass()}
-                  placeholder="+34 600 000 000"
-                  value={form.phone}
-                  onChange={(e) => setField("phone", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Dirección" className="col-span-full sm:col-span-1">
-                <input
-                  className={getInputClass()}
-                  placeholder="Calle Mayor 1, 28001 Madrid"
-                  value={form.address}
-                  onChange={(e) => setField("address", e.target.value)}
-                />
-              </Field>
-            </div>
-          </div>
-
-          {/* ── Section: Access credentials ── */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-            <div className="flex items-center justify-between gap-4 mb-1">
-              <div>
-                <SectionTitle>Acceso al portal</SectionTitle>
-                <p className="text-xs text-zinc-500 -mt-3 mb-4">
-                  Usuarios independientes del cliente (camareros, recepción…)
-                  que pueden entrar en el portal.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addCredential}
-                className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
-              >
-                <Icon name="plus" className="w-3.5 h-3.5" />
-                Añadir usuario
-              </button>
-            </div>
-
-            {credentials.length === 0 ? (
-              <p className="text-sm text-zinc-600 bg-zinc-50 dark:bg-zinc-950/40 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-6 text-center">
-                Todavía no hay usuarios con acceso al portal. Pulsa "Añadir
-                usuario" para crear el primero.
+      <div className="px-6 lg:px-8 py-6 w-full">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-8">
+            <button
+              onClick={goBack}
+              className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              title="Volver"
+            >
+              <Icon name="arrowLeft" className="w-4 h-4" />
+            </button>
+            <div>
+              <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+                {isEdit
+                  ? (customer?.name ?? "Editar cliente")
+                  : "Nuevo cliente"}
+              </h1>
+              <p className="text-sm text-zinc-500 mt-0.5">
+                {isEdit
+                  ? "Edita los datos y aplicaciones del cliente"
+                  : "Rellena los datos para crear un cliente"}
               </p>
-            ) : (
-              <div className="space-y-4">
-                {credentials.map((credential, index) => {
-                  const rowError =
-                    credentialErrors[credential.id] ||
-                    credentialErrors[String(index)];
+            </div>
+          </div>
 
-                  return (
-                    <div
-                      key={credential.id}
-                      className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30 p-4"
+          <div className="flex flex-col gap-6">
+            {/* ── Section: Info ── */}
+            <div className="@container bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+              <SectionTitle>Información del cliente</SectionTitle>
+              <div className="grid grid-cols-1 @sm:grid-cols-2 gap-4">
+                <Field
+                  label="Nombre"
+                  required
+                  hint={
+                    !isEdit ? "(se usa para generar el usuario)" : undefined
+                  }
+                  error={fieldErrors.name}
+                  className="col-span-full"
+                >
+                  <input
+                    className={getInputClass(fieldErrors.name)}
+                    placeholder="Ana García López"
+                    value={form.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Email" required error={fieldErrors.email}>
+                  <input
+                    type="email"
+                    className={getInputClass(fieldErrors.email)}
+                    placeholder="ana@empresa.com"
+                    value={form.email}
+                    onChange={(e) => setField("email", e.target.value)}
+                  />
+                </Field>
+
+                <Field label="DNI / NIF" required error={fieldErrors.dni}>
+                  <input
+                    className={getInputClass(fieldErrors.dni)}
+                    placeholder="12345678A"
+                    value={form.dni}
+                    onChange={(e) => setField("dni", e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Empresa">
+                  <input
+                    className={getInputClass()}
+                    placeholder="TechTide Solutions"
+                    value={form.company}
+                    onChange={(e) => setField("company", e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Estado">
+                  <div className="relative">
+                    <select
+                      className={`${getInputClass()} appearance-none pr-10`}
+                      value={form.status}
+                      onChange={(e) =>
+                        setField("status", e.target.value as CustomerStatus)
+                      }
                     >
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <span className="text-xs text-zinc-600">
-                          Usuario {index + 1}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          {customer?.credentials?.some(
-                            (c) => c.id === credential.id,
-                          ) && (
+                      {(Object.keys(statusLabel) as CustomerStatus[]).map(
+                        (s) => (
+                          <option key={s} value={s}>
+                            {statusLabel[s]}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                    <ChevronsUpDown
+                      className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                      strokeWidth={2}
+                    />
+                  </div>
+                </Field>
+
+                <Field
+                  label="Dominios"
+                  hint="(separados por coma)"
+                  className="col-span-full"
+                >
+                  <input
+                    className={getInputClass()}
+                    placeholder="miempresa.com, tienda.miempresa.es"
+                    value={form.domains}
+                    onChange={(e) => setField("domains", e.target.value)}
+                  />
+                </Field>
+
+                <Field
+                  label="Teléfono"
+                  className="col-span-full @sm:col-span-1"
+                >
+                  <input
+                    type="tel"
+                    className={getInputClass()}
+                    placeholder="+34 600 000 000"
+                    value={form.phone}
+                    onChange={(e) => setField("phone", e.target.value)}
+                  />
+                </Field>
+
+                <Field
+                  label="Dirección"
+                  className="col-span-full @sm:col-span-1"
+                >
+                  <input
+                    className={getInputClass()}
+                    placeholder="Calle Mayor 1, 28001 Madrid"
+                    value={form.address}
+                    onChange={(e) => setField("address", e.target.value)}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            {/* ── Section: Access credentials ── */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+              <div className="flex items-center justify-between gap-4 mb-1">
+                <div>
+                  <SectionTitle>Acceso al portal</SectionTitle>
+                  <p className="text-xs text-zinc-500 -mt-3 mb-4">
+                    Usuarios independientes del cliente (camareros, recepción…)
+                    que pueden entrar en el portal.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addCredential}
+                  className="flex items-center gap-1.5 -mt-4 mb-4 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
+                >
+                  <Icon name="plus" className="w-3.5 h-3.5" />
+                  Añadir usuario
+                </button>
+              </div>
+
+              {credentials.length === 0 ? (
+                <p className="text-sm text-zinc-600 bg-zinc-50 dark:bg-zinc-950/40 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-6 text-center">
+                  Todavía no hay usuarios con acceso al portal. Pulsa "Añadir
+                  usuario" para crear el primero.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {credentials.map((credential, index) => {
+                    const rowError =
+                      credentialErrors[credential.id] ||
+                      credentialErrors[String(index)];
+
+                    return (
+                      <div
+                        key={credential.id}
+                        className="@container rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <span className="text-xs text-zinc-600">
+                            Usuario {index + 1}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            {customer?.credentials?.some(
+                              (c) => c.id === credential.id,
+                            ) && (
+                              <button
+                                type="button"
+                                onClick={() => setPermissionsFor(credential)}
+                                className="px-2.5 py-1 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors"
+                              >
+                                Permisos
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => setPermissionsFor(credential)}
-                              className="text-xs text-teal-800 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-200 transition-colors"
+                              onClick={() =>
+                                setCredentialToRemove({ index, credential })
+                              }
+                              className="px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-red-700 dark:hover:text-red-400 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-red-50 dark:hover:bg-red-500/10 border border-zinc-200 dark:border-zinc-700 hover:border-red-300 dark:hover:border-red-500/40 rounded-lg transition-colors"
                             >
-                              Permisos
+                              Quitar
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCredentials((users) =>
-                                users.filter((_, i) => i !== index),
-                              )
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 @sm:grid-cols-2 gap-4">
+                          <Field
+                            label="Nombre"
+                            error={
+                              rowError === "El nombre es obligatorio."
+                                ? rowError
+                                : undefined
                             }
-                            className="text-xs text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                           >
-                            Quitar
-                          </button>
+                            <input
+                              className={getInputClass(
+                                rowError === "El nombre es obligatorio.",
+                              )}
+                              placeholder="Sara García"
+                              value={credential.name}
+                              onChange={(event) =>
+                                updateCredential(index, {
+                                  name: event.target.value,
+                                })
+                              }
+                            />
+                          </Field>
+
+                          <Field
+                            label="Usuario"
+                            hint="(se genera a partir del nombre)"
+                            error={
+                              rowError === "El nombre es obligatorio."
+                                ? undefined
+                                : rowError
+                            }
+                          >
+                            <div className="flex gap-2">
+                              <input
+                                className={`${getInputClass(rowError)} cursor-default focus:ring-0 opacity-80`}
+                                placeholder="Genera el usuario a partir del nombre"
+                                value={credential.username}
+                                readOnly
+                                tabIndex={-1}
+                                autoComplete="off"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleGenerateCredentialUsername(index)
+                                }
+                                disabled={!credential.name.trim()}
+                                title={
+                                  credential.name.trim()
+                                    ? "Generar usuario a partir del nombre"
+                                    : "Escribe primero el nombre"
+                                }
+                                className="shrink-0 flex items-center justify-center p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg transition-all duration-200"
+                              >
+                                <Icon
+                                  name="refresh"
+                                  className="w-4 h-4"
+                                  strokeWidth={1.8}
+                                />
+                              </button>
+                            </div>
+                          </Field>
+
+                          <Field label="Rol" hint="(opcional)">
+                            <input
+                              className={getInputClass()}
+                              placeholder="Camarero, Cocina, Encargado…"
+                              value={credential.role}
+                              onChange={(event) =>
+                                updateCredential(index, {
+                                  role: event.target.value,
+                                })
+                              }
+                            />
+                          </Field>
+
+                          <Field label="Contraseña">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  regenerateCredentialPassword(index)
+                                }
+                                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-medium rounded-lg transition-all duration-200"
+                              >
+                                <Icon
+                                  name="refresh"
+                                  className="w-3.5 h-3.5"
+                                  strokeWidth={1.8}
+                                />
+                                Generar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => copyCredentialPassword(index)}
+                                disabled={!credential.password}
+                                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border text-xs font-medium rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${credential.hasCopiedPassword && credential.password ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"}`}
+                              >
+                                {credential.hasCopiedPassword &&
+                                credential.password ? (
+                                  <>
+                                    <Icon
+                                      name="check"
+                                      className="w-3.5 h-3.5"
+                                    />
+                                    Copiada
+                                  </>
+                                ) : (
+                                  <>
+                                    <Icon
+                                      name="clipboard"
+                                      className="w-3.5 h-3.5"
+                                      strokeWidth={1.8}
+                                    />
+                                    Copiar
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </Field>
+
+                          {credential.isNewPasswordGenerated &&
+                            !credential.hasCopiedPassword && (
+                              <div className="col-span-full flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-lg px-3 py-2">
+                                <Icon
+                                  name="warningTriangle"
+                                  className="w-4 h-4 shrink-0"
+                                />
+                                Copia la nueva contraseña antes de guardar los
+                                cambios.
+                              </div>
+                            )}
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Field
-                          label="Nombre"
-                          error={
-                            rowError === "El nombre es obligatorio."
-                              ? rowError
-                              : undefined
-                          }
-                        >
-                          <input
-                            className={getInputClass(
-                              rowError === "El nombre es obligatorio.",
-                            )}
-                            placeholder="Sara García"
-                            value={credential.name}
-                            onChange={(event) =>
-                              updateCredential(index, {
-                                name: event.target.value,
-                              })
-                            }
-                          />
-                        </Field>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-                        <Field
-                          label="Usuario"
-                          hint="(se genera a partir del nombre)"
-                          error={
-                            rowError === "El nombre es obligatorio."
-                              ? undefined
-                              : rowError
-                          }
-                        >
-                          <div className="flex gap-2">
-                            <input
-                              className={`${getInputClass(rowError)} cursor-default focus:ring-0 opacity-80`}
-                              placeholder="Genera el usuario a partir del nombre"
-                              value={credential.username}
-                              readOnly
-                              tabIndex={-1}
-                              autoComplete="off"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleGenerateCredentialUsername(index)
-                              }
-                              disabled={!credential.name.trim()}
-                              title={
-                                credential.name.trim()
-                                  ? "Generar usuario a partir del nombre"
-                                  : "Escribe primero el nombre"
-                              }
-                              className="shrink-0 flex items-center justify-center p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg transition-all duration-200"
-                            >
+            {/* ── Section: Payment ── */}
+            {isEdit && instancesList.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+                <SectionTitle>Facturación</SectionTitle>
+                <div className="space-y-4">
+                  {instancesList.map((inst) => {
+                    const payment = instancePayments[inst.id];
+                    const justRecorded = payment?.justRecorded ?? false;
+                    const status = getBillingStatus(inst);
+                    const isExpanded = expandedHistory.has(inst.id);
+                    const isLoadingHistory =
+                      paymentHistoryByInstance[inst.id]?.isLoading ?? false;
+                    const history = paymentHistoryByInstance[inst.id]?.data;
+
+                    return (
+                      <div
+                        key={inst.id}
+                        className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 space-y-4"
+                      >
+                        {/* Header: app name + live status badge */}
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            {inst.application.name}
+                          </p>
+                          <span
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full border ${status.colorClasses}`}
+                          >
+                            {status.label}
+                          </span>
+                        </div>
+
+                        {/* Billing settings: frequency + day of the cycle */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Frecuencia de cobro">
+                            <div className="relative">
+                              <select
+                                className={`${getInputClass()} appearance-none pr-10`}
+                                value={inst.billingFrequency}
+                                onChange={(e) =>
+                                  updateBilling(inst, {
+                                    billingFrequency: e.target
+                                      .value as BillingFrequency,
+                                  })
+                                }
+                              >
+                                {(
+                                  Object.keys(
+                                    billingFrequencyLabel,
+                                  ) as BillingFrequency[]
+                                ).map((freq) => (
+                                  <option key={freq} value={freq}>
+                                    {billingFrequencyLabel[freq]}
+                                  </option>
+                                ))}
+                              </select>
                               <Icon
-                                name="refresh"
-                                className="w-4 h-4"
-                                strokeWidth={1.8}
+                                name="chevronDown"
+                                className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
                               />
-                            </button>
-                          </div>
-                        </Field>
-
-                        <Field label="Rol" hint="(opcional)">
-                          <input
-                            className={getInputClass()}
-                            placeholder="Camarero, Cocina, Encargado…"
-                            value={credential.role}
-                            onChange={(event) =>
-                              updateCredential(index, {
-                                role: event.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-
-                        <Field label="Contraseña">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                regenerateCredentialPassword(index)
-                              }
-                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-medium rounded-lg transition-all duration-200"
-                            >
-                              <Icon
-                                name="refresh"
-                                className="w-3.5 h-3.5"
-                                strokeWidth={1.8}
-                              />
-                              Generar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => copyCredentialPassword(index)}
-                              disabled={!credential.password}
-                              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border text-xs font-medium rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${credential.hasCopiedPassword && credential.password ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"}`}
-                            >
-                              {credential.hasCopiedPassword &&
-                              credential.password ? (
-                                <>
-                                  <Icon name="check" className="w-3.5 h-3.5" />
-                                  Copiada
-                                </>
-                              ) : (
-                                <>
-                                  <Icon
-                                    name="clipboard"
-                                    className="w-3.5 h-3.5"
-                                    strokeWidth={1.8}
-                                  />
-                                  Copiar
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </Field>
-
-                        {credential.isNewPasswordGenerated &&
-                          !credential.hasCopiedPassword && (
-                            <div className="col-span-full flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-lg px-3 py-2">
-                              <Icon
-                                name="warningTriangle"
-                                className="w-4 h-4 shrink-0"
-                              />
-                              Copia la nueva contraseña antes de guardar los
-                              cambios.
                             </div>
-                          )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                          </Field>
 
-          {/* ── Section: Payment ── */}
-          {isEdit && instancesList.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-              <SectionTitle>Facturación</SectionTitle>
-              <div className="space-y-4">
-                {instancesList.map((inst) => {
-                  const payment = instancePayments[inst.id];
-                  const justRecorded = payment?.justRecorded ?? false;
-                  const status = getBillingStatus(inst);
-                  const isExpanded = expandedHistory.has(inst.id);
-                  const isLoadingHistory =
-                    paymentHistoryByInstance[inst.id]?.isLoading ?? false;
-                  const history = paymentHistoryByInstance[inst.id]?.data;
-
-                  return (
-                    <div
-                      key={inst.id}
-                      className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 space-y-4"
-                    >
-                      {/* Header: app name + live status badge */}
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                          {inst.application.name}
-                        </p>
-                        <span
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border ${status.colorClasses}`}
-                        >
-                          {status.label}
-                        </span>
-                      </div>
-
-                      {/* Billing settings: frequency + day of the cycle */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Frecuencia de cobro">
-                          <div className="relative">
-                            <select
-                              className={`${getInputClass()} appearance-none pr-10`}
-                              value={inst.billingFrequency}
-                              onChange={(e) =>
-                                updateBilling(inst, {
-                                  billingFrequency: e.target
-                                    .value as BillingFrequency,
-                                })
-                              }
-                            >
-                              {(
-                                Object.keys(
-                                  billingFrequencyLabel,
-                                ) as BillingFrequency[]
-                              ).map((freq) => (
-                                <option key={freq} value={freq}>
-                                  {billingFrequencyLabel[freq]}
-                                </option>
-                              ))}
-                            </select>
-                            <Icon
-                              name="chevronDown"
-                              className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                            />
-                          </div>
-                        </Field>
-
-                        <Field label="Día de cobro" hint="(1-31)">
-                          <div className="relative">
-                            <select
-                              className={`${getInputClass()} appearance-none pr-10`}
-                              value={inst.billingDay}
-                              onChange={(e) =>
-                                updateBilling(inst, {
-                                  billingDay: Number(e.target.value),
-                                })
-                              }
-                            >
-                              {Array.from({ length: 31 }, (_, i) => i + 1).map(
-                                (day) => (
+                          <Field label="Día de cobro" hint="(1-31)">
+                            <div className="relative">
+                              <select
+                                className={`${getInputClass()} appearance-none pr-10`}
+                                value={inst.billingDay}
+                                onChange={(e) =>
+                                  updateBilling(inst, {
+                                    billingDay: Number(e.target.value),
+                                  })
+                                }
+                              >
+                                {Array.from(
+                                  { length: 31 },
+                                  (_, i) => i + 1,
+                                ).map((day) => (
                                   <option key={day} value={day}>
                                     {day}
                                   </option>
-                                ),
-                              )}
-                            </select>
+                                ))}
+                              </select>
+                              <Icon
+                                name="chevronDown"
+                                className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                              />
+                            </div>
+                          </Field>
+                        </div>
+
+                        {/* Last payment / next due date */}
+                        <div className="flex items-center justify-between gap-4 text-xs flex-wrap">
+                          <span className="text-zinc-500">
+                            Último pago:{" "}
+                            <span className="text-zinc-600 dark:text-zinc-400">
+                              {inst.lastPaymentDate
+                                ? formatDate(inst.lastPaymentDate)
+                                : "sin pagos registrados"}
+                            </span>
+                          </span>
+                          <span className="text-zinc-500">
+                            Próximo cobro:{" "}
+                            <span className="text-zinc-600 dark:text-zinc-400">
+                              {formatDate(status.nextDueDate)}
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* Register a new payment */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            className={`${getInputClass()} flex-1`}
+                            placeholder="Nota (opcional)"
+                            value={paymentNotes[inst.id] ?? ""}
+                            onChange={(e) =>
+                              setPaymentNotes((prev) => ({
+                                ...prev,
+                                [inst.id]: e.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() => recordPayment(inst)}
+                            disabled={
+                              recordPaymentMutation.isPending &&
+                              recordPaymentMutation.variables?.instance.id ===
+                                inst.id
+                            }
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium border transition-all duration-300 shrink-0 disabled:opacity-50 ${
+                              justRecorded
+                                ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+                                : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-teal-300 dark:hover:border-teal-500/50 hover:text-teal-800 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-500/10"
+                            }`}
+                          >
+                            {justRecorded ? (
+                              <>
+                                <Icon name="check" className="w-3.5 h-3.5" />
+                                Registrado
+                              </>
+                            ) : (
+                              <>
+                                <Icon name="plus" className="w-3.5 h-3.5" />
+                                Registrar pago
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* History toggle + list */}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => toggleHistory(inst.id)}
+                            className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 flex items-center gap-1.5 transition-colors"
+                          >
                             <Icon
                               name="chevronDown"
-                              className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                              className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
                             />
-                          </div>
-                        </Field>
-                      </div>
+                            {isExpanded
+                              ? "Ocultar historial"
+                              : "Ver historial de pagos"}
+                          </button>
 
-                      {/* Last payment / next due date */}
-                      <div className="flex items-center justify-between gap-4 text-xs flex-wrap">
-                        <span className="text-zinc-500">
-                          Último pago:{" "}
-                          <span className="text-zinc-600 dark:text-zinc-400">
-                            {inst.lastPaymentDate
-                              ? formatDate(inst.lastPaymentDate)
-                              : "sin pagos registrados"}
-                          </span>
-                        </span>
-                        <span className="text-zinc-500">
-                          Próximo cobro:{" "}
-                          <span className="text-zinc-600 dark:text-zinc-400">
-                            {formatDate(status.nextDueDate)}
-                          </span>
-                        </span>
-                      </div>
-
-                      {/* Register a new payment */}
-                      <div className="flex items-center gap-2">
-                        <input
-                          className={`${getInputClass()} flex-1`}
-                          placeholder="Nota (opcional)"
-                          value={paymentNotes[inst.id] ?? ""}
-                          onChange={(e) =>
-                            setPaymentNotes((prev) => ({
-                              ...prev,
-                              [inst.id]: e.target.value,
-                            }))
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() => recordPayment(inst)}
-                          disabled={
-                            recordPaymentMutation.isPending &&
-                            recordPaymentMutation.variables?.instance.id ===
-                              inst.id
-                          }
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium border transition-all duration-300 shrink-0 disabled:opacity-50 ${
-                            justRecorded
-                              ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
-                              : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-teal-300 dark:hover:border-teal-500/50 hover:text-teal-800 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-500/10"
-                          }`}
-                        >
-                          {justRecorded ? (
-                            <>
-                              <Icon name="check" className="w-3.5 h-3.5" />
-                              Registrado
-                            </>
-                          ) : (
-                            <>
-                              <Icon name="plus" className="w-3.5 h-3.5" />
-                              Registrar pago
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      {/* History toggle + list */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => toggleHistory(inst.id)}
-                          className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 flex items-center gap-1.5 transition-colors"
-                        >
-                          <Icon
-                            name="chevronDown"
-                            className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                          />
-                          {isExpanded
-                            ? "Ocultar historial"
-                            : "Ver historial de pagos"}
-                        </button>
-
-                        {isExpanded && (
-                          <div className="mt-3 space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                            {isLoadingHistory ? (
-                              <p className="text-xs text-zinc-600 italic py-2">
-                                Cargando…
-                              </p>
-                            ) : !history || history.length === 0 ? (
-                              <p className="text-xs text-zinc-600 italic py-2">
-                                Sin pagos registrados todavía.
-                              </p>
-                            ) : (
-                              history.map((p) => (
-                                <div
-                                  key={p.id}
-                                  className="flex items-center justify-between gap-3 text-xs bg-zinc-100 dark:bg-zinc-800/50 rounded-lg px-3 py-2"
-                                >
-                                  <div className="min-w-0 truncate">
-                                    <span className="text-zinc-700 dark:text-zinc-300">
-                                      {formatDate(p.paidAt)}
-                                    </span>
-                                    {p.note && (
-                                      <span className="text-zinc-500 ml-2 truncate">
-                                        {p.note}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => removePayment(inst.id, p.id)}
-                                    className="text-zinc-600 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
-                                    title="Eliminar este registro"
+                          {isExpanded && (
+                            <div className="mt-3 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                              {isLoadingHistory ? (
+                                <p className="text-xs text-zinc-600 italic py-2">
+                                  Cargando…
+                                </p>
+                              ) : !history || history.length === 0 ? (
+                                <p className="text-xs text-zinc-600 italic py-2">
+                                  Sin pagos registrados todavía.
+                                </p>
+                              ) : (
+                                history.map((p) => (
+                                  <div
+                                    key={p.id}
+                                    className="flex items-center justify-between gap-3 text-xs bg-zinc-100 dark:bg-zinc-800/50 rounded-lg px-3 py-2"
                                   >
-                                    <Icon
-                                      name="close"
-                                      className="w-3.5 h-3.5"
-                                    />
-                                  </button>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── Section: Apps ── */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-            <SectionTitle>Aplicaciones contratadas</SectionTitle>
-
-            {applications.length === 0 ? (
-              <p className="text-sm text-zinc-500">
-                No hay aplicaciones configuradas.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {applications.map((app) => {
-                  const isSelected = selectedApps.has(app.id);
-                  const svcMap = appServices[app.id] ?? {};
-
-                  return (
-                    <div
-                      key={app.id}
-                      className={`border rounded-xl overflow-hidden transition-colors ${
-                        isSelected
-                          ? "border-teal-300 dark:border-teal-500/40 bg-teal-50 dark:bg-teal-500/5"
-                          : "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30"
-                      }`}
-                    >
-                      <div
-                        className="flex items-center gap-3 px-5 py-4 cursor-pointer select-none"
-                        onClick={() => toggleApp(app.id)}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected
-                              ? "bg-teal-600 border-teal-600"
-                              : "border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800"
-                          }`}
-                        >
-                          {isSelected && (
-                            <Icon
-                              name="check"
-                              className="w-2.5 h-2.5 text-white"
-                              strokeWidth={1.5}
-                            />
+                                    <div className="min-w-0 truncate">
+                                      <span className="text-zinc-700 dark:text-zinc-300">
+                                        {formatDate(p.paidAt)}
+                                      </span>
+                                      {p.note && (
+                                        <span className="text-zinc-500 ml-2 truncate">
+                                          {p.note}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removePayment(inst.id, p.id)
+                                      }
+                                      className="text-zinc-600 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
+                                      title="Eliminar"
+                                    >
+                                      <Icon
+                                        name="close"
+                                        className="w-3.5 h-3.5"
+                                      />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           )}
                         </div>
-                        <span
-                          className={`text-sm font-medium transition-colors ${isSelected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"}`}
-                        >
-                          {app.name}
-                        </span>
-                        {app.services.length > 0 && (
-                          <span className="ml-auto text-xs text-zinc-600">
-                            {app.services.length} servicio
-                            {app.services.length !== 1 ? "s" : ""}
-                          </span>
-                        )}
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                      {isSelected && app.services.length > 0 && (
-                        <div className="border-t border-teal-200 dark:border-teal-500/20 divide-y divide-zinc-200 dark:divide-zinc-800/60">
-                          {app.services.map((svc) => {
-                            const active = svcMap[svc.id] ?? false;
-                            return (
-                              <div
-                                key={svc.id}
-                                className="flex items-center gap-4 px-5 py-3"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate">
-                                    {svc.name}
-                                  </p>
-                                  {svc.description && (
-                                    <p className="text-xs text-zinc-500 mt-0.5 truncate">
-                                      {svc.description}
-                                    </p>
-                                  )}
-                                </div>
-                                {svc.price && (
-                                  <span className="text-xs text-zinc-500 shrink-0">
-                                    {svc.price}
-                                  </span>
-                                )}
-                                <Toggle
-                                  checked={active}
-                                  onChange={(v) =>
-                                    toggleService(app.id, svc.id, v)
-                                  }
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+            {/* ── Section: Documentation (contracts) ── */}
+            {isEdit && (
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+                <div className="flex items-start justify-between gap-4 mb-1 flex-wrap">
+                  <div>
+                    <SectionTitle>Documentación</SectionTitle>
+                    <p className="text-xs text-zinc-500 -mt-3 mb-4">
+                      Documentos generados para este cliente (contratos, fichas
+                      de alcance, mantenimiento, presupuestos y renovaciones).
+                      Al generar uno nuevo, el anterior del mismo tipo queda
+                      marcado como sustituido.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 -mt-4 mb-4 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocMode("onboarding");
+                        setShowDocModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 rounded-lg transition-colors shrink-0"
+                      title="Genera Contrato + Ficha de alcance web + Ficha de mantenimiento de una vez"
+                    >
+                      <Icon name="userPlus" className="w-3.5 h-3.5" />
+                      Dar de alta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocMode("single");
+                        setDocType("RENEWAL");
+                        setShowDocModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg transition-colors shrink-0"
+                    >
+                      <Icon name="refresh" className="w-3.5 h-3.5" />
+                      Renovar contrato
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocMode("single");
+                        setDocType("CONTRACT");
+                        setShowDocModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg transition-colors shrink-0"
+                    >
+                      <Icon name="fileText" className="w-3.5 h-3.5" />
+                      Generar documento
+                    </button>
+                  </div>
+                </div>
 
-                      {isSelected && app.services.length === 0 && (
-                        <div className="border-t border-teal-200 dark:border-teal-500/20 px-5 py-3">
-                          <p className="text-xs text-zinc-600">
-                            Esta aplicación no tiene servicios definidos.
+                {documentsLoading ? (
+                  <p className="text-sm text-zinc-500">Cargando…</p>
+                ) : documents.length === 0 ? (
+                  <p className="text-sm text-zinc-600 bg-zinc-50 dark:bg-zinc-950/40 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-6 text-center">
+                    Todavía no se ha generado ningún documento para este
+                    cliente.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Icon
+                              name={documentTypeMeta[doc.type].icon}
+                              className="w-3.5 h-3.5 text-zinc-500 shrink-0"
+                            />
+                            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                              {documentTypeMeta[doc.type].shortLabel}
+                            </span>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${documentStatusStyles[doc.status]}`}
+                            >
+                              {documentStatusLabel[doc.status]}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Generado el {formatDate(doc.createdAt)}
+                            {doc.setupFee && ` · Alta: ${doc.setupFee} €`}
+                            {doc.maintenanceFee &&
+                              ` · Mantenimiento: ${doc.maintenanceFee} €`}
                           </p>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href={documentFileUrl(doc.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-medium rounded-lg transition-colors"
+                          >
+                            <Icon name="fileText" className="w-3.5 h-3.5" />
+                            Ver
+                          </a>
+                          <a
+                            href={documentFileUrl(doc.id)}
+                            download={doc.fileName}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-medium rounded-lg transition-colors"
+                          >
+                            <Icon name="download" className="w-3.5 h-3.5" />
+                            Descargar
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => openContractEmail(doc)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 border border-teal-200 dark:border-teal-500/25 text-teal-800 dark:text-teal-300 text-xs font-medium rounded-lg transition-colors"
+                            title="Abre tu cliente de correo con el asunto y el texto de aceptación ya rellenos. El PDF no se adjunta solo: descárgalo primero y adjúntalo antes de enviar."
+                          >
+                            <Icon name="mail" className="w-3.5 h-3.5" />
+                            Enviar por email
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDocToDelete(doc)}
+                            className="p-1.5 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Icon name="trash" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="mt-3 text-xs text-zinc-500 flex items-start gap-1.5">
+                  <Icon
+                    name="infoCircle"
+                    className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                  />
+                  Descarga el PDF y adjúntalo manualmente antes de enviar el
+                  correo.
+                </p>
               </div>
             )}
+
+            {/* ── Section: Apps ── */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+              <SectionTitle>Aplicaciones contratadas</SectionTitle>
+
+              {applications.length === 0 ? (
+                <p className="text-sm text-zinc-500">
+                  No hay aplicaciones configuradas.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {applications.map((app) => {
+                    const isSelected = selectedApps.has(app.id);
+                    const svcMap = appServices[app.id] ?? {};
+
+                    return (
+                      <div
+                        key={app.id}
+                        className={`border rounded-xl overflow-hidden transition-colors ${
+                          isSelected
+                            ? "border-teal-300 dark:border-teal-500/40 bg-teal-50 dark:bg-teal-500/5"
+                            : "border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/30"
+                        }`}
+                      >
+                        <div
+                          className="flex items-center gap-3 px-5 py-4 cursor-pointer select-none"
+                          onClick={() => toggleApp(app.id)}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected
+                                ? "bg-teal-600 border-teal-600"
+                                : "border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800"
+                            }`}
+                          >
+                            {isSelected && (
+                              <Icon
+                                name="check"
+                                className="w-2.5 h-2.5 text-white"
+                                strokeWidth={1.5}
+                              />
+                            )}
+                          </div>
+                          <span
+                            className={`text-sm font-medium transition-colors ${isSelected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"}`}
+                          >
+                            {app.name}
+                          </span>
+                          {app.services.length > 0 && (
+                            <span className="ml-auto text-xs text-zinc-600">
+                              {app.services.length} servicio
+                              {app.services.length !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+
+                        {isSelected && app.services.length > 0 && (
+                          <div className="border-t border-teal-200 dark:border-teal-500/20 divide-y divide-zinc-200 dark:divide-zinc-800/60">
+                            {app.services.map((svc) => {
+                              const active = svcMap[svc.id] ?? false;
+                              return (
+                                <div
+                                  key={svc.id}
+                                  className="flex items-center gap-4 px-5 py-3"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                                      {svc.name}
+                                    </p>
+                                    {svc.description && (
+                                      <p className="text-xs text-zinc-500 mt-0.5 truncate">
+                                        {svc.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {svc.price && (
+                                    <span className="text-xs text-zinc-500 shrink-0">
+                                      {svc.price}
+                                    </span>
+                                  )}
+                                  <Toggle
+                                    checked={active}
+                                    onChange={(v) =>
+                                      toggleService(app.id, svc.id, v)
+                                    }
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {isSelected && app.services.length === 0 && (
+                          <div className="border-t border-teal-200 dark:border-teal-500/20 px-5 py-3">
+                            <p className="text-xs text-zinc-600">
+                              Esta aplicación no tiene servicios definidos.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Error */}
-          {(error ?? loadError) && (
-            <div className="flex items-start gap-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-4 py-3">
-              <Icon
-                name="warningTriangle"
-                className="w-4 h-4 shrink-0 mt-0.5"
-                strokeWidth={2}
-              />
-              {error ?? loadError}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div
-            className={`flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pb-4 ${isEdit ? "justify-between" : "justify-end"}`}
-          >
-            {/* Delete — only for existing customers */}
-            {isEdit && (
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-400/10 border border-red-200 dark:border-red-500/20 hover:border-red-300 dark:hover:border-red-500/40 text-sm font-medium rounded-lg transition-colors"
-              >
-                <Icon name="trash" className="w-4 h-4" strokeWidth={1.8} />
-                Eliminar cliente
-              </button>
+          {/* Error + Actions: separadas del contenedor de "Aplicaciones
+              contratadas" (antes quedaban pegadas a él). */}
+          <div className="mt-6 space-y-4">
+            {(error ?? loadError) && (
+              <div className="flex items-start gap-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-4 py-3">
+                <Icon
+                  name="warningTriangle"
+                  className="w-4 h-4 shrink-0 mt-0.5"
+                  strokeWidth={2}
+                />
+                {error ?? loadError}
+              </div>
             )}
 
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={goBack}
-                className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={submit}
-                disabled={submitMutation.isPending}
-                className="flex items-center gap-2 px-5 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                {submitMutation.isPending && (
-                  <Spinner className="w-3.5 h-3.5" />
-                )}
-                {submitMutation.isPending
-                  ? "Guardando…"
-                  : isEdit
-                    ? "Guardar cambios"
-                    : "Crear cliente"}
-              </button>
+            {/* Actions */}
+            <div
+              className={`flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pb-4 ${isEdit ? "justify-between" : "justify-end"}`}
+            >
+              {/* Delete — only for existing customers */}
+              {isEdit && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-400/10 border border-red-200 dark:border-red-500/20 hover:border-red-300 dark:hover:border-red-500/40 text-sm font-medium rounded-lg transition-colors"
+                >
+                  <Icon name="trash" className="w-4 h-4" strokeWidth={1.8} />
+                  Eliminar
+                </button>
+              )}
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={goBack}
+                  className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={submitMutation.isPending}
+                  className="flex items-center gap-2 px-5 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {submitMutation.isPending && (
+                    <Spinner className="w-3.5 h-3.5" />
+                  )}
+                  {submitMutation.isPending
+                    ? "Guardando…"
+                    : isEdit
+                      ? "Guardar"
+                      : "Crear cliente"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1619,6 +1966,205 @@ export default function CustomerForm() {
           credentialId={permissionsFor.id}
           credentialName={permissionsFor.name}
           onClose={() => setPermissionsFor(null)}
+        />
+      )}
+
+      {credentialToRemove && (
+        <ConfirmDialog
+          title="¿Quitar usuario?"
+          message={
+            <>
+              <p>
+                Se quitará a{" "}
+                <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                  {credentialToRemove.credential.name ||
+                    `Usuario ${credentialToRemove.index + 1}`}
+                </span>{" "}
+                del acceso al portal.
+              </p>
+              <p className="mt-1">
+                Si ya tenía cuenta creada, se eliminará por completo al guardar.
+                Esta acción no se puede deshacer.
+              </p>
+            </>
+          }
+          confirmLabel="Quitar"
+          loading={false}
+          onConfirm={() => {
+            setCredentials((users) =>
+              users.filter((_, i) => i !== credentialToRemove.index),
+            );
+            setCredentialToRemove(null);
+          }}
+          onCancel={() => setCredentialToRemove(null)}
+        />
+      )}
+
+      {showDocModal && (
+        <Modal onClose={() => setShowDocModal(false)}>
+          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+            {docMode === "onboarding"
+              ? "Dar de alta — generar todos los documentos"
+              : docType === "RENEWAL"
+                ? "Renovar contrato"
+                : "Generar nuevo documento"}
+          </h3>
+          <p className="text-xs text-zinc-500 mb-5">
+            {docMode === "onboarding"
+              ? "Se generarán de una vez el Contrato de servicios, la Ficha de alcance web y la Ficha de mantenimiento, con los mismos datos económicos. El documento anterior de cada tipo (si existe) quedará marcado como sustituido."
+              : "Se generará un PDF a partir de las aplicaciones y servicios contratados actualmente. El documento anterior del mismo tipo (si existe) quedará marcado como sustituido."}
+          </p>
+
+          {docMode === "onboarding" && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {onboardingBundleTypes.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full"
+                >
+                  <Icon
+                    name={documentTypeMeta[t].icon}
+                    className="w-3.5 h-3.5"
+                  />
+                  {documentTypeMeta[t].shortLabel}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {docMode === "single" && (
+              <Field label="Tipo de documento">
+                <div className="relative">
+                  <select
+                    className={`${getInputClass()} appearance-none pr-10`}
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value as DocumentType)}
+                  >
+                    {documentTypeOrder.map((t) => (
+                      <option key={t} value={t}>
+                        {documentTypeMeta[t].label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronsUpDown
+                    className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    strokeWidth={2}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-zinc-500">
+                  {documentTypeMeta[docType].helpText}
+                </p>
+              </Field>
+            )}
+            <Field
+              label={
+                docMode === "single" && docType === "RENEWAL"
+                  ? "Coste adicional de la renovación"
+                  : "Coste de desarrollo inicial"
+              }
+              hint="(opcional, €)"
+            >
+              <input
+                className={getInputClass()}
+                placeholder="450"
+                value={docSetupFee}
+                onChange={(e) => setDocSetupFee(e.target.value)}
+              />
+            </Field>
+            <Field
+              label="Mantenimiento"
+              hint={
+                docMode === "single" && docType === "RENEWAL"
+                  ? "(opcional, € — deja vacío para mantener la cuota vigente)"
+                  : "(opcional, €)"
+              }
+            >
+              <input
+                className={getInputClass()}
+                placeholder="30"
+                value={docMaintenanceFee}
+                onChange={(e) => setDocMaintenanceFee(e.target.value)}
+              />
+            </Field>
+            <Field label="Notas adicionales" hint="(opcional)">
+              <textarea
+                className={`${getInputClass()} min-h-20 resize-none`}
+                placeholder="Condiciones particulares, descuentos, etc."
+                value={docNotes}
+                onChange={(e) => setDocNotes(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          {(docMode === "onboarding"
+            ? generateOnboardingMutation
+            : generateDocMutation
+          ).isError && (
+            <p className="mt-3 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+              {getErrorMessage(
+                (docMode === "onboarding"
+                  ? generateOnboardingMutation
+                  : generateDocMutation
+                ).error,
+                docMode === "onboarding"
+                  ? "No se pudieron generar los documentos de alta"
+                  : "No se pudo generar el documento",
+              )}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={() => setShowDocModal(false)}
+              className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                docMode === "onboarding"
+                  ? generateOnboardingMutation.mutate()
+                  : generateDocMutation.mutate()
+              }
+              disabled={
+                docMode === "onboarding"
+                  ? generateOnboardingMutation.isPending
+                  : generateDocMutation.isPending
+              }
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {(docMode === "onboarding"
+                ? generateOnboardingMutation
+                : generateDocMutation
+              ).isPending && <Spinner className="w-3.5 h-3.5" />}
+              {docMode === "onboarding" ? "Generar todos" : "Generar"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {docToDelete && (
+        <ConfirmDialog
+          title="Eliminar documento"
+          message={
+            <>
+              <p>
+                Vas a eliminar el documento{" "}
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {documentTypeMeta[docToDelete.type].shortLabel}
+                </span>{" "}
+                generado el {formatDate(docToDelete.createdAt)}.
+              </p>
+              <p>Esta acción no se puede deshacer.</p>
+            </>
+          }
+          confirmLabel="Eliminar"
+          loading={removeDocMutation.isPending}
+          onCancel={() => setDocToDelete(null)}
+          onConfirm={() => removeDocMutation.mutate(docToDelete.id)}
         />
       )}
     </>

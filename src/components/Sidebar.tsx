@@ -76,7 +76,7 @@ function SidebarContent({
             onClick={onLinkClick}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${collapsed ? "justify-center" : ""} ${
+              `flex items-center gap-3 px-3 h-9 rounded-lg text-sm font-medium transition-colors ${collapsed ? "justify-center" : ""} ${
                 isActive
                   ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
@@ -92,10 +92,29 @@ function SidebarContent({
       {/* Session actions */}
       <div className="px-3 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0 space-y-2">
         {collapsed && <ThemeToggle className="mx-auto" />}
+        <NavLink
+          to="/settings"
+          onClick={onLinkClick}
+          title={collapsed ? "Ajustes" : undefined}
+          className={({ isActive }) =>
+            `w-full px-3 h-9 text-sm rounded-lg transition-colors flex items-center gap-2.5 ${collapsed ? "justify-center" : ""} ${
+              isActive
+                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+            }`
+          }
+        >
+          <Icon
+            name="settings"
+            className="w-4 h-4 shrink-0"
+            strokeWidth={1.8}
+          />
+          {!collapsed && "Ajustes"}
+        </NavLink>
         <button
           onClick={handleLogout}
           title={collapsed ? "Cerrar sesión" : undefined}
-          className={`w-full px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
+          className={`w-full px-3 h-9 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 rounded-lg transition-colors text-left flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
         >
           <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.8} />
           {!collapsed && "Cerrar sesión"}

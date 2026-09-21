@@ -33,6 +33,9 @@ import type {
   CredentialServicePermission,
   BillingFrequency,
   Payment,
+  CustomerDocument,
+  DocumentType,
+  DocumentStatus,
 } from "./types";
 
 export type {
@@ -46,6 +49,9 @@ export type {
   CredentialServicePermission,
   BillingFrequency,
   Payment,
+  CustomerDocument,
+  DocumentType,
+  DocumentStatus,
 };
 
 // ─── Customer endpoints ───────────────────────────────────────────────────────
@@ -194,4 +200,69 @@ export const credentialsApi = {
         body: JSON.stringify({ enabled }),
       },
     ),
+};
+
+// ─── Backup (exportar/importar toda la base de datos) ────────────────────────
+
+/** URL absoluta para descargar el backup completo (se usa en un <a download>, no pasa por `request`). */
+export const backupExportUrl = () => `${BASE}/api/backup/export`;
+
+export type BackupImportResult = {
+  imported: Record<string, number>;
+};
+
+export const backupApi = {
+  /** `fileContents` es el JSON del archivo de backup, ya leído como texto. */
+  import: (fileContents: string) =>
+    request<BackupImportResult>("/api/backup/import", {
+      method: "POST",
+      body: fileContents,
+    }),
+};
+
+// ─── Documents (contracts) ─────────────────────────────────────────────────
+
+/** URL absoluta para ver/descargar el PDF de un documento (se abre en pestaña nueva, no pasa por `request`). */
+export const documentFileUrl = (documentId: number) =>
+  `${BASE}/api/documents/${documentId}/file`;
+
+export const documentsApi = {
+  list: (customerId: string) =>
+    request<CustomerDocument[]>(`/api/customers/${customerId}/documents`),
+
+  generate: (
+    customerId: string,
+    data: {
+      type?: DocumentType;
+      setupFee?: string;
+      maintenanceFee?: string;
+      notes?: string;
+      city?: string;
+    },
+  ) =>
+    request<CustomerDocument>(`/api/customers/${customerId}/documents`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /** "Dar de alta": genera Contrato + Ficha de alcance web + Ficha de mantenimiento juntos. */
+  generateOnboardingBundle: (
+    customerId: string,
+    data: {
+      setupFee?: string;
+      maintenanceFee?: string;
+      notes?: string;
+      city?: string;
+    },
+  ) =>
+    request<CustomerDocument[]>(
+      `/api/customers/${customerId}/documents/onboarding`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    ),
+
+  remove: (documentId: number) =>
+    request<void>(`/api/documents/${documentId}`, { method: "DELETE" }),
 };
