@@ -1,8 +1,4 @@
-// admin-portal/src/components/ConfirmDialog.tsx
-//
-// Diálogo de confirmación compartido (clientes, servicios...). Sustituye a
-// los `window.confirm()` del navegador para que eliminar o confirmar algo se
-// vea y se comporte siempre igual.
+// Diálogo de confirmación compartido, en vez de `window.confirm()` nativo.
 import type { ReactNode } from "react";
 import { Spinner } from "./icons";
 import Modal from "./Modal";

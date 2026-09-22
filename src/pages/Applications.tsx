@@ -204,10 +204,9 @@ export default function Applications() {
   const [deleteConfirm, setDeleteConfirm] = useState<Service | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Selecciona la primera categoría en cuanto llegan las apps, sin pisar la
-  // selección si el usuario ya había elegido una. Va en el cuerpo del
-  // render (no en un efecto): es una adaptación de estado a partir de datos
-  // ya cargados, no una sincronización con un sistema externo.
+  // Selecciona la primera categoría al llegar las apps, sin pisar la
+  // elección del usuario. Va en el render, no en un efecto: es adaptar
+  // estado a datos ya cargados, no sincronizar con un sistema externo.
   if (apps.length > 0 && activeCat === null) {
     setActiveCat(apps[0].id);
   }

@@ -35,23 +35,18 @@ import type {
   Payment,
   CustomerDocument,
   DocumentType,
-  DocumentStatus,
 } from "./types";
 
 export type {
   Customer,
   CustomerStatus,
   Service,
-  Application,
-  InstanceService,
   Instance,
   Credential,
   CredentialServicePermission,
   BillingFrequency,
-  Payment,
   CustomerDocument,
   DocumentType,
-  DocumentStatus,
 };
 
 // ─── Customer endpoints ───────────────────────────────────────────────────────

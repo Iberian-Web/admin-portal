@@ -24,10 +24,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const queryClient = useQueryClient();
 
-  // La sesión solo cambia por un login/logout explícito (ver más abajo), no
-  // por un refetch en segundo plano — de ahí el staleTime infinito. Al ser
-  // una query, React Query ya deduplica la petición inicial en StrictMode
-  // sin necesitar el useRef "initDone" que hacía falta antes.
+  // staleTime infinito: la sesión solo cambia por login/logout explícito, no
+  // por refetch en segundo plano. React Query ya deduplica el fetch inicial.
   const { data: authenticated = false, isLoading } = useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: checkSession,

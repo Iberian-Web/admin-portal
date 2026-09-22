@@ -516,10 +516,9 @@ export default function CustomerForm() {
     "status" in err &&
     (err as { status?: number }).status === 404;
 
-  // Si el cliente no existe (404), volvemos al listado y avisamos con un
-  // toast — reaccionar a un error de useQuery con un efecto es el patrón
-  // que la propia documentación de TanStack Query recomienda (v5 quitó
-  // onError/onSuccess de useQuery a propósito, en favor de esto).
+  // Si el cliente no existe (404), volvemos al listado con un toast —
+  // reaccionar a un error de useQuery con un efecto es el patrón que
+  // recomienda TanStack Query v5 tras quitar onError/onSuccess.
   useEffect(() => {
     if (!isEdit || !customerQueryError) return;
     if (isNotFoundError(customerQueryError)) {
@@ -535,11 +534,9 @@ export default function CustomerForm() {
       ? "Error al cargar los datos. Por favor, revisa tu conexión o intenta más tarde."
       : null;
 
-  // Siembra el formulario y todo el estado derivado (credenciales,
-  // instancias, servicios, pagos) una sola vez, cuando ya han llegado tanto
-  // el cliente como el catálogo de aplicaciones. Va en el cuerpo del render
-  // (no en un efecto): es una adaptación de estado a partir de datos ya
-  // cargados, no una sincronización con un sistema externo.
+  // Siembra el formulario y el estado derivado una sola vez, cuando llegan
+  // cliente y catálogo. Va en el render, no en un efecto: es adaptar estado
+  // a datos ya cargados, no sincronizar con un sistema externo.
   if (isEdit && !initialized && customerData && !appsLoading) {
     setInitialized(true);
     setCustomer(customerData);
@@ -675,9 +672,7 @@ export default function CustomerForm() {
           const app = applications.find((a) => a.id === appId);
           if (app) {
             // Al añadir una aplicación no se activa ningún servicio por
-            // defecto (igual que hace el backend al crear la instancia):
-            // si no se marca explícitamente ningún servicio, el cliente
-            // se queda solo con la web, sin servicios de la aplicación.
+            // defecto (igual que el backend al crear la instancia).
             const svcMap: ServiceState = {};
             for (const svc of app.services) svcMap[svc.id] = false;
             setAppServices((prev2) => ({ ...prev2, [appId]: svcMap }));

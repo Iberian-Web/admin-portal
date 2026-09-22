@@ -1,7 +1,5 @@
-// admin-portal/src/components/Modal.tsx
-//
 // Shell compartido (overlay + backdrop + tarjeta) para diálogos modales.
-// Clic fuera de la tarjeta cierra el modal; clic dentro no se propaga.
+// Clic fuera cierra el modal; clic dentro no se propaga.
 import type { MouseEvent, ReactNode } from "react";
 
 export default function Modal({
