@@ -25,6 +25,7 @@ const IMPORT_LABELS: Record<string, string> = {
   reservations: "Reservas",
   orders: "Pedidos",
   orderItems: "Líneas de pedido",
+  restaurantTables: "Mesas del mapa",
 };
 
 export default function Settings() {
