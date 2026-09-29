@@ -4,7 +4,7 @@ import { UtensilsCrossed } from "lucide-react";
 import { applicationsApi, servicesApi, type Service } from "../api";
 import { Icon } from "../components/icons";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { Field } from "../components/FormControls";
+import { Field, ModalFormFooter } from "../components/FormControls";
 import { getInputClass } from "../utils/inputClass";
 import { getErrorMessage } from "../utils/errors";
 import Modal from "../components/Modal";
@@ -72,21 +72,12 @@ function PriceModal({
         </p>
       )}
 
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={onClose}
-          className="px-4 py-2.5 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={submit}
-          disabled={mutation.isPending}
-          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
-        >
-          {mutation.isPending ? "Guardando…" : "Guardar"}
-        </button>
-      </div>
+      <ModalFormFooter
+        onCancel={onClose}
+        onSubmit={submit}
+        submitLabel="Guardar"
+        submitting={mutation.isPending}
+      />
     </Modal>
   );
 }
@@ -172,21 +163,13 @@ function CreateServiceModal({
         </p>
       )}
 
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={onClose}
-          className="px-4 py-2.5 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={submit}
-          disabled={mutation.isPending}
-          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
-        >
-          {mutation.isPending ? "Creando…" : "Crear servicio"}
-        </button>
-      </div>
+      <ModalFormFooter
+        onCancel={onClose}
+        onSubmit={submit}
+        submitLabel="Crear servicio"
+        submitting={mutation.isPending}
+        submittingLabel="Creando…"
+      />
     </Modal>
   );
 }
@@ -253,15 +236,12 @@ export default function Applications() {
           </p>
         </div>
       ) : (
-        // 👇 Cambiamos a flex-col en móvil y md:flex-row en escritorio
         <div className="flex flex-col md:flex-row gap-6">
           {/* App list (Categories) */}
-          {/* 👇 w-full en móvil, md:w-48 en escritorio */}
           <div className="w-full md:w-48 shrink-0">
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest px-1 mb-3">
               Categorías
             </p>
-            {/* 👇 flex-row con scroll horizontal en móvil, flex-col clásico en escritorio */}
             <div className="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-3 md:pb-0 scrollbar-none">
               {apps.map((a) => {
                 const icon = getIcon(a.icon);
@@ -270,7 +250,6 @@ export default function Applications() {
                   <button
                     key={a.id}
                     onClick={() => setActiveCat(a.id)}
-                    // 👇 Añadimos whitespace-nowrap y shrink-0 para que las pestañas no colapsen en el scroll móvil
                     className={`flex items-center gap-3 px-4 py-2.5 md:py-3 rounded-xl text-base font-semibold text-left transition-colors whitespace-nowrap md:whitespace-normal shrink-0 md:w-full ${
                       active
                         ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
@@ -329,26 +308,16 @@ export default function Applications() {
                       {cat.services.map((svc) => (
                         <div
                           key={svc.id}
-                          // 👇 Ajustamos los paddings internos para pantallas pequeñas (px-4 py-3.5 vs px-5 py-4)
                           className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl"
                         >
-                          {/* 👇 break-words previene desbordamientos raros si hay nombres larguísimos */}
                           <p className="flex-1 text-base font-semibold text-zinc-800 dark:text-zinc-200 wrap-break-word">
                             {svc.name}
                           </p>
 
-                          {/* 👇 Envolvemos el precio y botón en un contenedor shrink-0 para blindar su tamaño en móvil */}
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg min-w-15 text-center">
                               {svc.price || "—"}
                             </span>
-                            <button
-                              onClick={() => setPriceModal(svc)}
-                              className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
-                              title="Editar precio"
-                            >
-                              <Icon name="pencil" className="w-4 h-4" />
-                            </button>
                             <button
                               onClick={() => setDeleteConfirm(svc)}
                               disabled={
@@ -359,6 +328,13 @@ export default function Applications() {
                               title="Eliminar"
                             >
                               <Icon name="trash" className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setPriceModal(svc)}
+                              className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                              title="Editar precio"
+                            >
+                              <Icon name="pencil" className="w-4 h-4" />
                             </button>
                           </div>
                         </div>

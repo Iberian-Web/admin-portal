@@ -456,6 +456,11 @@ export default function CustomerForm() {
   const [docMaintenanceFee, setDocMaintenanceFee] = useState("");
   const [docNotes, setDocNotes] = useState("");
   const [docToDelete, setDocToDelete] = useState<CustomerDocument | null>(null);
+  const [paymentToRemove, setPaymentToRemove] = useState<{
+    instanceId: number;
+    paymentId: number;
+    paidAt: string;
+  } | null>(null);
 
   // Per-instance payment tracking: instanceId → { lastPaymentDate, justRecorded }
   const [instancePayments, setInstancePayments] = useState<
@@ -789,9 +794,6 @@ export default function CustomerForm() {
     },
     onError: () => showToast("No se pudo eliminar el registro", "error"),
   });
-  const removePayment = (instanceId: number, paymentId: number) => {
-    removePaymentMutation.mutate({ instanceId, paymentId });
-  };
 
   // ── Documentation (contracts) ──
   const documentsQueryKey = ["documents", id];
@@ -1271,6 +1273,15 @@ export default function CustomerForm() {
                             Usuario {index + 1}
                           </span>
                           <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCredentialToRemove({ index, credential })
+                              }
+                              className="px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-red-700 dark:hover:text-red-400 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-red-50 dark:hover:bg-red-500/10 border border-zinc-200 dark:border-zinc-700 hover:border-red-300 dark:hover:border-red-500/40 rounded-lg transition-colors"
+                            >
+                              Quitar
+                            </button>
                             {customer?.credentials?.some(
                               (c) => c.id === credential.id,
                             ) && (
@@ -1282,15 +1293,6 @@ export default function CustomerForm() {
                                 Permisos
                               </button>
                             )}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setCredentialToRemove({ index, credential })
-                              }
-                              className="px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-red-700 dark:hover:text-red-400 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-red-50 dark:hover:bg-red-500/10 border border-zinc-200 dark:border-zinc-700 hover:border-red-300 dark:hover:border-red-500/40 rounded-lg transition-colors"
-                            >
-                              Quitar
-                            </button>
                           </div>
                         </div>
                         <div className="grid grid-cols-1 @sm:grid-cols-2 gap-4">
@@ -1627,7 +1629,11 @@ export default function CustomerForm() {
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        removePayment(inst.id, p.id)
+                                        setPaymentToRemove({
+                                          instanceId: inst.id,
+                                          paymentId: p.id,
+                                          paidAt: formatDate(p.paidAt),
+                                        })
                                       }
                                       className="text-zinc-600 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
                                       title="Eliminar"
@@ -1740,6 +1746,14 @@ export default function CustomerForm() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setDocToDelete(doc)}
+                            className="p-1.5 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Icon name="trash" className="w-3.5 h-3.5" />
+                          </button>
                           <a
                             href={documentFileUrl(doc.id)}
                             target="_blank"
@@ -1765,14 +1779,6 @@ export default function CustomerForm() {
                           >
                             <Icon name="mail" className="w-3.5 h-3.5" />
                             Enviar por email
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDocToDelete(doc)}
-                            className="p-1.5 text-zinc-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
-                            title="Eliminar"
-                          >
-                            <Icon name="trash" className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -2160,6 +2166,33 @@ export default function CustomerForm() {
           loading={removeDocMutation.isPending}
           onCancel={() => setDocToDelete(null)}
           onConfirm={() => removeDocMutation.mutate(docToDelete.id)}
+        />
+      )}
+
+      {paymentToRemove && (
+        <ConfirmDialog
+          title="Eliminar registro de pago"
+          message={
+            <>
+              Vas a eliminar el pago del{" "}
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                {paymentToRemove.paidAt}
+              </span>
+              . Esta acción no se puede deshacer.
+            </>
+          }
+          confirmLabel="Eliminar"
+          loading={removePaymentMutation.isPending}
+          onCancel={() => setPaymentToRemove(null)}
+          onConfirm={() =>
+            removePaymentMutation.mutate(
+              {
+                instanceId: paymentToRemove.instanceId,
+                paymentId: paymentToRemove.paymentId,
+              },
+              { onSuccess: () => setPaymentToRemove(null) },
+            )
+          }
         />
       )}
     </>

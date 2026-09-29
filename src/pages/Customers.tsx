@@ -287,7 +287,6 @@ export default function Customers() {
             </tbody>
           </table>
         </div>{" "}
-        {/* 👆 Cierre del contenedor de scroll */}
       </div>
 
       <p className="text-xs text-zinc-600 mt-3">
